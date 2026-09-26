@@ -31,7 +31,7 @@ def f(x, nd):
 
 
 def render_results(runs: dict[str, dict]) -> str:
-    L = ["| 运行 | 训练帧 | 迭代 | 方法 | 留出帧 PSNR↑ | SSIM↑ | LPIPS↓ | 20 帧中胜过复制基线 |",
+    L = ["| 运行 | 训练帧 | 迭代 | 方法 | 留出帧 PSNR↑ | SSIM↑ | LPIPS↓ | PSNR 高于复制基线的留出帧数 |",
          "|---|---|---|---|---|---|---|---|"]
     for name, r in runs.items():
         for m in ("3dgs", "copy_nearest", "init_only"):
@@ -39,7 +39,7 @@ def render_results(runs: dict[str, dict]) -> str:
             beats = f"{r['heldout_3dgs_beats_copy_nearest']}/{r['n_test']}" if m == "3dgs" else ""
             L.append(f"| `{name}` | {r['n_train']} | {r['train']['steps'] if m == '3dgs' else '—'} | {METHOD_NAME[m]} | "
                      f"{f(h.get('psnr'), 2)} | {f(h.get('ssim'), 3)} | {f(h.get('lpips'), 3)} | {beats} |")
-    L += ["", "| 运行 | 训练用时 (s) | 峰值显存 allocated / reserved (MB) | 高斯数 初始 → 最终 | 训练视角 PSNR / SSIM（过拟合参照） |",
+    L += ["", "| 运行 | 训练用时 (s) | 峰值显存 allocated / reserved (MB，torch 统计，不含 CUDA 上下文) | 高斯数 初始 → 最终 | 训练视角 PSNR / SSIM（每 7 个训练帧抽 1 帧；过拟合参照） |",
           "|---|---|---|---|---|"]
     for name, r in runs.items():
         t = r["train"]
@@ -64,10 +64,10 @@ def render_setup(runs: dict[str, dict]) -> str:
 
 
 def replace_block(text: str, tag: str, body: str) -> str:
-    pat = re.compile(rf"(<!-- BEGIN:{tag} -->\n)(.*?)(\n<!-- END:{tag} -->)", re.S)
+    pat = re.compile(rf"(<!-- BEGIN:{tag} -->)(.*?)(<!-- END:{tag} -->)", re.S)
     if not pat.search(text):
         raise SystemExit(f"README missing block {tag}")
-    return pat.sub(lambda m: m.group(1) + body + m.group(3), text)
+    return pat.sub(lambda m: m.group(1) + "\n" + body + "\n" + m.group(3), text)
 
 
 def main() -> None:
