@@ -1,0 +1,442 @@
+{
+ "date": "2026-09-26",
+ "dataset": "Argoverse 2 Sensor Dataset (val split)",
+ "log_id": "15ec0778-826e-3ed7-9775-54fbf66997f4",
+ "camera": "ring_front_center",
+ "n_frames": 160,
+ "n_train": 140,
+ "n_test": 20,
+ "holdout_every": 8,
+ "resolution": [
+  388,
+  456
+ ],
+ "clip_duration_s": 7.95,
+ "trajectory_length_m": 36.5,
+ "init": {
+  "lidar_points_raw": 4037747,
+  "lidar_points_seen_by_train": 552316,
+  "lidar_points_after_voxel": 200000,
+  "sky_points": 20000,
+  "voxel_m": 0.08
+ },
+ "train_stride": 1,
+ "train": {
+  "steps": 7000,
+  "sh_degree": 3,
+  "n_gaussians_init": 220000,
+  "n_gaussians_final": 557802,
+  "train_wall_s": 347.9,
+  "vram_peak_allocated_mb": 852,
+  "vram_peak_reserved_mb": 1202,
+  "gpu": "NVIDIA GeForce GTX 1650",
+  "torch": "2.4.1+cu124",
+  "gsplat": "1.5.3+pt24cu124"
+ },
+ "heldout_mean": {
+  "3dgs": {
+   "psnr": 27.7611,
+   "ssim": 0.8708,
+   "lpips": 0.1922
+  },
+  "init_only": {
+   "psnr": 17.7619,
+   "ssim": 0.6477,
+   "lpips": 0.7297
+  },
+  "copy_nearest": {
+   "psnr": 20.7057,
+   "ssim": 0.6514,
+   "lpips": 0.1176
+  }
+ },
+ "train_views_mean_3dgs": {
+  "psnr": 28.6134,
+  "ssim": 0.8882
+ },
+ "n_train_views_evaluated": 20,
+ "lpips": "alex (lpips 0.1.4)",
+ "per_frame": [
+  {
+   "frame": 4,
+   "nearest_train": 3,
+   "3dgs": {
+    "psnr": 31.2382,
+    "ssim": 0.9312,
+    "lpips": 0.119342140853405
+   },
+   "init_only": {
+    "psnr": 18.6665,
+    "ssim": 0.7287,
+    "lpips": 0.6343219876289368
+   },
+   "copy_nearest": {
+    "psnr": 25.7298,
+    "ssim": 0.7869,
+    "lpips": 0.056070372462272644
+   }
+  },
+  {
+   "frame": 12,
+   "nearest_train": 11,
+   "3dgs": {
+    "psnr": 32.1621,
+    "ssim": 0.9408,
+    "lpips": 0.13074646890163422
+   },
+   "init_only": {
+    "psnr": 19.4858,
+    "ssim": 0.7553,
+    "lpips": 0.6145166158676147
+   },
+   "copy_nearest": {
+    "psnr": 25.1285,
+    "ssim": 0.7962,
+    "lpips": 0.048686154186725616
+   }
+  },
+  {
+   "frame": 20,
+   "nearest_train": 19,
+   "3dgs": {
+    "psnr": 31.8668,
+    "ssim": 0.9386,
+    "lpips": 0.1297096312046051
+   },
+   "init_only": {
+    "psnr": 19.8873,
+    "ssim": 0.7563,
+    "lpips": 0.6165633201599121
+   },
+   "copy_nearest": {
+    "psnr": 25.0507,
+    "ssim": 0.7969,
+    "lpips": 0.04766927659511566
+   }
+  },
+  {
+   "frame": 28,
+   "nearest_train": 27,
+   "3dgs": {
+    "psnr": 32.3464,
+    "ssim": 0.9393,
+    "lpips": 0.13908113539218903
+   },
+   "init_only": {
+    "psnr": 20.2496,
+    "ssim": 0.7551,
+    "lpips": 0.625521183013916
+   },
+   "copy_nearest": {
+    "psnr": 24.6161,
+    "ssim": 0.7825,
+    "lpips": 0.05318095162510872
+   }
+  },
+  {
+   "frame": 36,
+   "nearest_train": 35,
+   "3dgs": {
+    "psnr": 30.8561,
+    "ssim": 0.9295,
+    "lpips": 0.15367987751960754
+   },
+   "init_only": {
+    "psnr": 20.2344,
+    "ssim": 0.7479,
+    "lpips": 0.6387414336204529
+   },
+   "copy_nearest": {
+    "psnr": 23.1713,
+    "ssim": 0.7515,
+    "lpips": 0.060217276215553284
+   }
+  },
+  {
+   "frame": 44,
+   "nearest_train": 43,
+   "3dgs": {
+    "psnr": 29.61,
+    "ssim": 0.9099,
+    "lpips": 0.16721346974372864
+   },
+   "init_only": {
+    "psnr": 20.1984,
+    "ssim": 0.7388,
+    "lpips": 0.6505275368690491
+   },
+   "copy_nearest": {
+    "psnr": 21.8499,
+    "ssim": 0.713,
+    "lpips": 0.08357831835746765
+   }
+  },
+  {
+   "frame": 52,
+   "nearest_train": 51,
+   "3dgs": {
+    "psnr": 27.3385,
+    "ssim": 0.8785,
+    "lpips": 0.2078487128019333
+   },
+   "init_only": {
+    "psnr": 20.0975,
+    "ssim": 0.7236,
+    "lpips": 0.6705547571182251
+   },
+   "copy_nearest": {
+    "psnr": 20.3594,
+    "ssim": 0.6841,
+    "lpips": 0.11423620581626892
+   }
+  },
+  {
+   "frame": 60,
+   "nearest_train": 59,
+   "3dgs": {
+    "psnr": 28.2703,
+    "ssim": 0.8632,
+    "lpips": 0.25561830401420593
+   },
+   "init_only": {
+    "psnr": 19.858,
+    "ssim": 0.7201,
+    "lpips": 0.7101663947105408
+   },
+   "copy_nearest": {
+    "psnr": 21.9306,
+    "ssim": 0.6776,
+    "lpips": 0.13834908604621887
+   }
+  },
+  {
+   "frame": 68,
+   "nearest_train": 67,
+   "3dgs": {
+    "psnr": 29.6528,
+    "ssim": 0.8383,
+    "lpips": 0.2986826002597809
+   },
+   "init_only": {
+    "psnr": 18.7836,
+    "ssim": 0.6721,
+    "lpips": 0.7716488838195801
+   },
+   "copy_nearest": {
+    "psnr": 22.3727,
+    "ssim": 0.6328,
+    "lpips": 0.18083149194717407
+   }
+  },
+  {
+   "frame": 76,
+   "nearest_train": 75,
+   "3dgs": {
+    "psnr": 25.7623,
+    "ssim": 0.7778,
+    "lpips": 0.2954266369342804
+   },
+   "init_only": {
+    "psnr": 15.7842,
+    "ssim": 0.5645,
+    "lpips": 0.8260520696640015
+   },
+   "copy_nearest": {
+    "psnr": 19.3483,
+    "ssim": 0.5315,
+    "lpips": 0.20382578670978546
+   }
+  },
+  {
+   "frame": 84,
+   "nearest_train": 83,
+   "3dgs": {
+    "psnr": 22.9669,
+    "ssim": 0.752,
+    "lpips": 0.2943601608276367
+   },
+   "init_only": {
+    "psnr": 16.2121,
+    "ssim": 0.543,
+    "lpips": 0.805650532245636
+   },
+   "copy_nearest": {
+    "psnr": 18.5798,
+    "ssim": 0.4825,
+    "lpips": 0.22230929136276245
+   }
+  },
+  {
+   "frame": 92,
+   "nearest_train": 91,
+   "3dgs": {
+    "psnr": 23.2247,
+    "ssim": 0.7726,
+    "lpips": 0.2521629333496094
+   },
+   "init_only": {
+    "psnr": 17.1714,
+    "ssim": 0.5667,
+    "lpips": 0.7963218092918396
+   },
+   "copy_nearest": {
+    "psnr": 17.7165,
+    "ssim": 0.493,
+    "lpips": 0.2014036327600479
+   }
+  },
+  {
+   "frame": 100,
+   "nearest_train": 99,
+   "3dgs": {
+    "psnr": 23.8305,
+    "ssim": 0.8139,
+    "lpips": 0.23084430396556854
+   },
+   "init_only": {
+    "psnr": 16.5087,
+    "ssim": 0.5792,
+    "lpips": 0.7884841561317444
+   },
+   "copy_nearest": {
+    "psnr": 17.4875,
+    "ssim": 0.5227,
+    "lpips": 0.15723399817943573
+   }
+  },
+  {
+   "frame": 108,
+   "nearest_train": 107,
+   "3dgs": {
+    "psnr": 25.8143,
+    "ssim": 0.8471,
+    "lpips": 0.19779634475708008
+   },
+   "init_only": {
+    "psnr": 16.9398,
+    "ssim": 0.5985,
+    "lpips": 0.7529512643814087
+   },
+   "copy_nearest": {
+    "psnr": 18.7689,
+    "ssim": 0.5545,
+    "lpips": 0.12734898924827576
+   }
+  },
+  {
+   "frame": 116,
+   "nearest_train": 115,
+   "3dgs": {
+    "psnr": 27.2375,
+    "ssim": 0.8755,
+    "lpips": 0.15224908292293549
+   },
+   "init_only": {
+    "psnr": 17.6518,
+    "ssim": 0.6022,
+    "lpips": 0.7456398606300354
+   },
+   "copy_nearest": {
+    "psnr": 19.0416,
+    "ssim": 0.5946,
+    "lpips": 0.11300201714038849
+   }
+  },
+  {
+   "frame": 124,
+   "nearest_train": 123,
+   "3dgs": {
+    "psnr": 26.7219,
+    "ssim": 0.8716,
+    "lpips": 0.16023260354995728
+   },
+   "init_only": {
+    "psnr": 17.4514,
+    "ssim": 0.58,
+    "lpips": 0.7626878023147583
+   },
+   "copy_nearest": {
+    "psnr": 19.0425,
+    "ssim": 0.615,
+    "lpips": 0.10941498726606369
+   }
+  },
+  {
+   "frame": 132,
+   "nearest_train": 131,
+   "3dgs": {
+    "psnr": 26.2042,
+    "ssim": 0.8653,
+    "lpips": 0.163915753364563
+   },
+   "init_only": {
+    "psnr": 16.9053,
+    "ssim": 0.5645,
+    "lpips": 0.794306218624115
+   },
+   "copy_nearest": {
+    "psnr": 18.303,
+    "ssim": 0.6056,
+    "lpips": 0.12290710210800171
+   }
+  },
+  {
+   "frame": 140,
+   "nearest_train": 139,
+   "3dgs": {
+    "psnr": 25.6491,
+    "ssim": 0.8596,
+    "lpips": 0.17196820676326752
+   },
+   "init_only": {
+    "psnr": 15.4002,
+    "ssim": 0.5375,
+    "lpips": 0.8243372440338135
+   },
+   "copy_nearest": {
+    "psnr": 17.1564,
+    "ssim": 0.5901,
+    "lpips": 0.1343042254447937
+   }
+  },
+  {
+   "frame": 148,
+   "nearest_train": 147,
+   "3dgs": {
+    "psnr": 26.4922,
+    "ssim": 0.894,
+    "lpips": 0.17321251332759857
+   },
+   "init_only": {
+    "psnr": 14.1059,
+    "ssim": 0.5863,
+    "lpips": 0.782760739326477
+   },
+   "copy_nearest": {
+    "psnr": 17.6707,
+    "ssim": 0.6315,
+    "lpips": 0.11867500841617584
+   }
+  },
+  {
+   "frame": 156,
+   "nearest_train": 155,
+   "3dgs": {
+    "psnr": 27.9775,
+    "ssim": 0.917,
+    "lpips": 0.15066005289554596
+   },
+   "init_only": {
+    "psnr": 13.6454,
+    "ssim": 0.6341,
+    "lpips": 0.781863808631897
+   },
+   "copy_nearest": {
+    "psnr": 20.7889,
+    "ssim": 0.7863,
+    "lpips": 0.05945383757352829
+   }
+  }
+ ],
+ "heldout_3dgs_beats_copy_nearest": 20
+}
