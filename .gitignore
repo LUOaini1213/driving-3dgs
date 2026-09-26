@@ -1,0 +1,16 @@
+# data / outputs live in D:\driving-3dgs, never in git
+*.ply
+*.pt
+*.pth
+*.npz
+*.feather
+*.png
+*.splat
+data/
+work/
+runs/
+export/
+env/
+__pycache__/
+.pytest_cache/
+*.pyc

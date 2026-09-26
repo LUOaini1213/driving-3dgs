@@ -1,0 +1,13 @@
+# Windows prebuilt gsplat wheels exist only for Python 3.10 + torch <= 2.4, so this project uses:
+#   conda create -p D:/driving-3dgs/env python=3.10
+#   pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu124
+#   pip install "gsplat==1.5.3+pt24cu124" --index-url https://docs.gsplat.studio/whl/pt24cu124 --extra-index-url https://pypi.org/simple
+#   pip install -r requirements.txt
+numpy<2
+pandas
+pyarrow
+opencv-python-headless
+scipy
+pytest
+scikit-image
+lpips==0.1.4
