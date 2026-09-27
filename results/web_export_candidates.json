@@ -1,0 +1,61 @@
+{
+ "note": "candidate web assets (same export code); the committed one is results/web_export.json",
+ "candidates": [
+  {
+   "run": "full_30k",
+   "bytes": 12800000,
+   "bytes_per_splat": 32,
+   "n_gaussians_trained": 1677839,
+   "n_exported": 400000,
+   "min_opacity": 0.05,
+   "max_splats": 400000,
+   "heldout_psnr_mean": {
+    "full_sh3": 29.8662,
+    "full_sh0": 27.0399,
+    "web_subset_sh0": 22.155
+   }
+  },
+  {
+   "run": "full_30k",
+   "bytes": 19200000,
+   "bytes_per_splat": 32,
+   "n_gaussians_trained": 1677839,
+   "n_exported": 600000,
+   "min_opacity": 0.05,
+   "max_splats": 600000,
+   "heldout_psnr_mean": {
+    "full_sh3": 29.8662,
+    "full_sh0": 27.0399,
+    "web_subset_sh0": 25.1175
+   }
+  },
+  {
+   "run": "full_7k",
+   "bytes": 17849664,
+   "bytes_per_splat": 32,
+   "n_gaussians_trained": 557802,
+   "n_exported": 557802,
+   "min_opacity": 0.0,
+   "max_splats": 600000,
+   "heldout_psnr_mean": {
+    "full_sh3": 27.7611,
+    "full_sh0": 27.001,
+    "web_subset_sh0": 27.001
+   }
+  },
+  {
+   "run": "full_7k",
+   "bytes": 9918624,
+   "bytes_per_splat": 32,
+   "n_gaussians_trained": 557802,
+   "n_exported": 309957,
+   "min_opacity": 0.05,
+   "max_splats": 600000,
+   "heldout_psnr_mean": {
+    "full_sh3": 27.7611,
+    "full_sh0": 27.001,
+    "web_subset_sh0": 26.5584
+   }
+  }
+ ]
+}

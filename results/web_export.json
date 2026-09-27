@@ -1,0 +1,17 @@
+{
+ "run": "full_7k",
+ "file": "docs/splat/full_7k.splat",
+ "bytes": 9918624,
+ "bytes_per_splat": 32,
+ "n_gaussians_trained": 557802,
+ "n_exported": 309957,
+ "min_opacity": 0.05,
+ "max_splats": 600000,
+ "initial_camera_frame": 84,
+ "renderer": "@mkkellogg/gaussian-splats-3d@0.4.7 + three@0.160.0 (jsDelivr)",
+ "heldout_psnr_mean": {
+  "full_sh3": 27.7611,
+  "full_sh0": 27.001,
+  "web_subset_sh0": 26.5584
+ }
+}

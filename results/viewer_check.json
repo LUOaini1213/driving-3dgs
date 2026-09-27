@@ -1,0 +1,27 @@
+{
+ "date": "2026-09-27",
+ "page": "docs/splat/viewer.html",
+ "chromium_args": [
+  "--use-gl=swiftshader",
+  "--enable-webgl",
+  "--ignore-gpu-blocklist"
+ ],
+ "ready": true,
+ "load_and_first_frames_s": 40.2,
+ "console_errors": [],
+ "failed_requests": [],
+ "console_warnings": 4,
+ "canvas_stats": {
+  "canvas": [
+   960,
+   600
+  ],
+  "nonbackground_frac": 0.8818611111111111,
+  "luma_mean": 90.46406500000047,
+  "luma_std": 53.66494523254866,
+  "webgl": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+ },
+ "screenshot": "docs/img/viewer_headless.jpg",
+ "screenshot_bytes": 68538,
+ "ok": true
+}

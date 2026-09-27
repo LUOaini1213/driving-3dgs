@@ -1,0 +1,107 @@
+{
+ "offsets_m": [
+  -2.0,
+  -1.0,
+  0.0,
+  1.0,
+  2.0
+ ],
+ "frames": [
+  4,
+  12,
+  20,
+  28,
+  36,
+  44,
+  52,
+  60,
+  68,
+  76,
+  84,
+  92,
+  100,
+  108,
+  116,
+  124,
+  132,
+  140,
+  148,
+  156
+ ],
+ "runs": {
+  "strict_7k": {
+   "mask": "none",
+   "depth_lambda": 0.0,
+   "steps": 7000,
+   "per_offset": {
+    "-2": {
+     "hole_frac_mean": 0.0116,
+     "depth_median_abs_m": 2.6067,
+     "depth_within_0_5m": 0.1615,
+     "depth_n": 224532
+    },
+    "-1": {
+     "hole_frac_mean": 0.003,
+     "depth_median_abs_m": 2.6609,
+     "depth_within_0_5m": 0.1432,
+     "depth_n": 232047
+    },
+    "+0": {
+     "hole_frac_mean": 0.0011,
+     "depth_median_abs_m": 3.1807,
+     "depth_within_0_5m": 0.1206,
+     "depth_n": 243519
+    },
+    "+1": {
+     "hole_frac_mean": 0.0171,
+     "depth_median_abs_m": 3.8016,
+     "depth_within_0_5m": 0.1184,
+     "depth_n": 240452
+    },
+    "+2": {
+     "hole_frac_mean": 0.0539,
+     "depth_median_abs_m": 3.5653,
+     "depth_within_0_5m": 0.1204,
+     "depth_n": 238870
+    }
+   }
+  },
+  "strict_depth_7k": {
+   "mask": "none",
+   "depth_lambda": 0.05,
+   "steps": 7000,
+   "per_offset": {
+    "-2": {
+     "hole_frac_mean": 0.0098,
+     "depth_median_abs_m": 0.237,
+     "depth_within_0_5m": 0.6373,
+     "depth_n": 224532
+    },
+    "-1": {
+     "hole_frac_mean": 0.0026,
+     "depth_median_abs_m": 0.184,
+     "depth_within_0_5m": 0.692,
+     "depth_n": 232047
+    },
+    "+0": {
+     "hole_frac_mean": 0.0011,
+     "depth_median_abs_m": 0.152,
+     "depth_within_0_5m": 0.7356,
+     "depth_n": 243519
+    },
+    "+1": {
+     "hole_frac_mean": 0.0198,
+     "depth_median_abs_m": 0.195,
+     "depth_within_0_5m": 0.6752,
+     "depth_n": 240452
+    },
+    "+2": {
+     "hole_frac_mean": 0.0574,
+     "depth_median_abs_m": 0.2766,
+     "depth_within_0_5m": 0.5963,
+     "depth_n": 238870
+    }
+   }
+  }
+ }
+}

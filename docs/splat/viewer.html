@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Driving 3DGS viewer</title>
+<style>
+ :root{--bg:#0e1013;--fg:#e8e8e8;--muted:#9aa3ad}
+ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,sans-serif;overflow:hidden}
+ #info{position:fixed;left:12px;top:10px;right:12px;z-index:10;pointer-events:none;text-shadow:0 1px 2px #000}
+ #info small{color:var(--muted)} #status{color:#ffd479}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+"@mkkellogg/gaussian-splats-3d":"https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js"}}</script>
+</head><body>
+<div id="info"><b>AV2 driving clip &middot; 3D Gaussian Splatting (full_7k)</b> <span id="status">loading 9.9 MB&hellip;</span><br>
+<small>309,957 of 557,802 trained Gaussians (pruned for the web, view-independent colour only) &middot;
+starts at held-out camera 84 &middot; drag to orbit, right-drag to pan, scroll to zoom.
+Renderer: @mkkellogg/gaussian-splats-3d. Data &copy; 2021 Argo AI, LLC, CC BY-NC-SA 4.0 (non-commercial).</small></div>
+<script type="module">
+import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
+const st=document.getElementById('status');
+const viewer=new GaussianSplats3D.Viewer({
+  cameraUp:[0,0,1], initialCameraPosition:[2.059999942779541, 2.9579999446868896, -0.06700000166893005], initialCameraLookAt:[7.4670000076293945, -5.448999881744385, 0.2329999953508377],
+  sharedMemoryForWorkers:false, gpuAcceleratedSort:false, integerBasedSort:false,
+  sceneRevealMode:GaussianSplats3D.SceneRevealMode.Instant, antialiased:true});
+viewer.addSplatScene('full_7k.splat',{format:GaussianSplats3D.SceneFormat.Splat,splatAlphaRemovalThreshold:5,
+  showLoadingUI:false,progressiveLoad:false})
+ .then(()=>{viewer.start(); st.textContent='';
+   let n=0; const tick=()=>{if(++n<10)requestAnimationFrame(tick); else window.__splatReady=true}; requestAnimationFrame(tick);})
+ .catch(e=>{st.textContent='failed to load: '+e; console.error(e)});
+window.__viewer=viewer;
+</script></body></html>

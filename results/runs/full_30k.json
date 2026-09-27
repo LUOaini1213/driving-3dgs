@@ -1,0 +1,1279 @@
+{
+ "date": "2026-09-26",
+ "dataset": "Argoverse 2 Sensor Dataset (val split)",
+ "log_id": "15ec0778-826e-3ed7-9775-54fbf66997f4",
+ "camera": "ring_front_center",
+ "n_frames": 160,
+ "n_train": 140,
+ "n_test": 20,
+ "holdout_every": 8,
+ "resolution": [
+  388,
+  456
+ ],
+ "clip_duration_s": 7.95,
+ "trajectory_length_m": 36.5,
+ "init": {
+  "lidar_points_raw": 4037747,
+  "lidar_points_seen_by_train": 552316,
+  "lidar_points_after_voxel": 200000,
+  "sky_points": 20000,
+  "voxel_m": 0.08
+ },
+ "train_stride": 1,
+ "train": {
+  "steps": 30000,
+  "seed": 0,
+  "sh_degree": 3,
+  "n_gaussians_init": 220000,
+  "n_gaussians_final": 1677839,
+  "train_wall_s": 4325.5,
+  "vram_peak_allocated_mb": 2530,
+  "vram_peak_reserved_mb": 3862,
+  "gpu": "NVIDIA GeForce GTX 1650",
+  "torch": "2.4.1+cu124",
+  "gsplat": "1.5.3+pt24cu124"
+ },
+ "train_throughput": {
+  "segment_steps": 500,
+  "median_segment_s": 62.0,
+  "slowest_segment_s": 963.6,
+  "slowest_segment_end_step": 20500,
+  "stall_excess_s": 1084.6,
+  "n_stalled_segments": 2
+ },
+ "heldout_mean": {
+  "3dgs": {
+   "psnr": 29.8662,
+   "ssim": 0.9017,
+   "lpips": 0.1072
+  },
+  "init_only": {
+   "psnr": 17.7619,
+   "ssim": 0.6477,
+   "lpips": 0.7297
+  },
+  "copy_nearest": {
+   "psnr": 20.7057,
+   "ssim": 0.6514,
+   "lpips": 0.1176
+  }
+ },
+ "mask": "none",
+ "depth_lambda": 0.0,
+ "lidar_policy": "legacy",
+ "train_views_mean_3dgs": {
+  "psnr": 32.4758,
+  "ssim": 0.9395
+ },
+ "n_train_views_evaluated": 20,
+ "lpips": "alex (lpips 0.1.4)",
+ "per_frame": [
+  {
+   "frame": 4,
+   "nearest_train": 3,
+   "3dgs": {
+    "psnr": 35.2674,
+    "ssim": 0.9596,
+    "lpips": 0.05368693172931671,
+    "static": {
+     "psnr": 35.2674,
+     "ssim": 0.9596,
+     "lpips": 0.05368654802441597
+    }
+   },
+   "init_only": {
+    "psnr": 18.6665,
+    "ssim": 0.7287,
+    "lpips": 0.6343219876289368,
+    "static": {
+     "psnr": 18.6665,
+     "ssim": 0.7287,
+     "lpips": 0.6343200206756592
+    }
+   },
+   "copy_nearest": {
+    "psnr": 25.7298,
+    "ssim": 0.7869,
+    "lpips": 0.056070372462272644,
+    "static": {
+     "psnr": 25.7298,
+     "ssim": 0.7869,
+     "lpips": 0.05607033520936966
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 12140,
+     "median_abs_m": 6.1939,
+     "mean_abs_m": 9.4054,
+     "within_tol": 0.0196,
+     "abs_rel": 0.2617
+    },
+    "init_only": {
+     "n": 12140,
+     "median_abs_m": 4.4869,
+     "mean_abs_m": 8.2715,
+     "within_tol": 0.1488,
+     "abs_rel": 0.2612
+    }
+   }
+  },
+  {
+   "frame": 12,
+   "nearest_train": 11,
+   "3dgs": {
+    "psnr": 35.5517,
+    "ssim": 0.9643,
+    "lpips": 0.06747639179229736,
+    "static": {
+     "psnr": 35.5517,
+     "ssim": 0.9643,
+     "lpips": 0.0674772709608078
+    }
+   },
+   "init_only": {
+    "psnr": 19.4858,
+    "ssim": 0.7553,
+    "lpips": 0.6145166158676147,
+    "static": {
+     "psnr": 19.4858,
+     "ssim": 0.7553,
+     "lpips": 0.6145150065422058
+    }
+   },
+   "copy_nearest": {
+    "psnr": 25.1285,
+    "ssim": 0.7962,
+    "lpips": 0.048686154186725616,
+    "static": {
+     "psnr": 25.1285,
+     "ssim": 0.7962,
+     "lpips": 0.048685796558856964
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 12252,
+     "median_abs_m": 6.0363,
+     "mean_abs_m": 9.2589,
+     "within_tol": 0.0136,
+     "abs_rel": 0.2652
+    },
+    "init_only": {
+     "n": 12252,
+     "median_abs_m": 4.3188,
+     "mean_abs_m": 8.2794,
+     "within_tol": 0.1579,
+     "abs_rel": 0.2669
+    }
+   }
+  },
+  {
+   "frame": 20,
+   "nearest_train": 19,
+   "3dgs": {
+    "psnr": 34.5951,
+    "ssim": 0.9593,
+    "lpips": 0.07470623403787613,
+    "static": {
+     "psnr": 34.5951,
+     "ssim": 0.9593,
+     "lpips": 0.07470648735761642
+    }
+   },
+   "init_only": {
+    "psnr": 19.8873,
+    "ssim": 0.7563,
+    "lpips": 0.6165633201599121,
+    "static": {
+     "psnr": 19.8873,
+     "ssim": 0.7563,
+     "lpips": 0.616561233997345
+    }
+   },
+   "copy_nearest": {
+    "psnr": 25.0507,
+    "ssim": 0.7969,
+    "lpips": 0.04766927659511566,
+    "static": {
+     "psnr": 25.0507,
+     "ssim": 0.7969,
+     "lpips": 0.04766901955008507
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 12369,
+     "median_abs_m": 6.0447,
+     "mean_abs_m": 9.2814,
+     "within_tol": 0.0153,
+     "abs_rel": 0.2744
+    },
+    "init_only": {
+     "n": 12369,
+     "median_abs_m": 4.2041,
+     "mean_abs_m": 8.5968,
+     "within_tol": 0.1628,
+     "abs_rel": 0.2841
+    }
+   }
+  },
+  {
+   "frame": 28,
+   "nearest_train": 27,
+   "3dgs": {
+    "psnr": 34.076,
+    "ssim": 0.9557,
+    "lpips": 0.07799109816551208,
+    "static": {
+     "psnr": 34.076,
+     "ssim": 0.9557,
+     "lpips": 0.07799112796783447
+    }
+   },
+   "init_only": {
+    "psnr": 20.2496,
+    "ssim": 0.7551,
+    "lpips": 0.625521183013916,
+    "static": {
+     "psnr": 20.2496,
+     "ssim": 0.7551,
+     "lpips": 0.6255220770835876
+    }
+   },
+   "copy_nearest": {
+    "psnr": 24.6161,
+    "ssim": 0.7825,
+    "lpips": 0.05318095162510872,
+    "static": {
+     "psnr": 24.6161,
+     "ssim": 0.7825,
+     "lpips": 0.05318049341440201
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 12445,
+     "median_abs_m": 6.0044,
+     "mean_abs_m": 9.1138,
+     "within_tol": 0.0183,
+     "abs_rel": 0.2859
+    },
+    "init_only": {
+     "n": 12445,
+     "median_abs_m": 4.2318,
+     "mean_abs_m": 8.8482,
+     "within_tol": 0.1581,
+     "abs_rel": 0.307
+    }
+   }
+  },
+  {
+   "frame": 36,
+   "nearest_train": 35,
+   "3dgs": {
+    "psnr": 34.1129,
+    "ssim": 0.9564,
+    "lpips": 0.08133982867002487,
+    "static": {
+     "psnr": 34.1129,
+     "ssim": 0.9564,
+     "lpips": 0.08134210109710693
+    }
+   },
+   "init_only": {
+    "psnr": 20.2344,
+    "ssim": 0.7479,
+    "lpips": 0.6387414336204529,
+    "static": {
+     "psnr": 20.2344,
+     "ssim": 0.7479,
+     "lpips": 0.6387428045272827
+    }
+   },
+   "copy_nearest": {
+    "psnr": 23.1713,
+    "ssim": 0.7515,
+    "lpips": 0.060217276215553284,
+    "static": {
+     "psnr": 23.1713,
+     "ssim": 0.7515,
+     "lpips": 0.060216937214136124
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 12404,
+     "median_abs_m": 6.0242,
+     "mean_abs_m": 8.869,
+     "within_tol": 0.0168,
+     "abs_rel": 0.2976
+    },
+    "init_only": {
+     "n": 12404,
+     "median_abs_m": 4.5293,
+     "mean_abs_m": 8.9975,
+     "within_tol": 0.1451,
+     "abs_rel": 0.3283
+    }
+   }
+  },
+  {
+   "frame": 44,
+   "nearest_train": 43,
+   "3dgs": {
+    "psnr": 33.2819,
+    "ssim": 0.9482,
+    "lpips": 0.0839429423213005,
+    "static": {
+     "psnr": 33.2819,
+     "ssim": 0.9482,
+     "lpips": 0.08394373208284378
+    }
+   },
+   "init_only": {
+    "psnr": 20.1984,
+    "ssim": 0.7388,
+    "lpips": 0.6505275368690491,
+    "static": {
+     "psnr": 20.1984,
+     "ssim": 0.7388,
+     "lpips": 0.6505253911018372
+    }
+   },
+   "copy_nearest": {
+    "psnr": 21.8499,
+    "ssim": 0.713,
+    "lpips": 0.08357831835746765,
+    "static": {
+     "psnr": 21.8499,
+     "ssim": 0.713,
+     "lpips": 0.08357812464237213
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 12536,
+     "median_abs_m": 6.5989,
+     "mean_abs_m": 8.9562,
+     "within_tol": 0.0168,
+     "abs_rel": 0.3222
+    },
+    "init_only": {
+     "n": 12536,
+     "median_abs_m": 5.2634,
+     "mean_abs_m": 9.6584,
+     "within_tol": 0.1414,
+     "abs_rel": 0.3822
+    }
+   }
+  },
+  {
+   "frame": 52,
+   "nearest_train": 51,
+   "3dgs": {
+    "psnr": 31.1604,
+    "ssim": 0.9242,
+    "lpips": 0.11287281662225723,
+    "static": {
+     "psnr": 31.1604,
+     "ssim": 0.9242,
+     "lpips": 0.11287365108728409
+    }
+   },
+   "init_only": {
+    "psnr": 20.0975,
+    "ssim": 0.7236,
+    "lpips": 0.6705547571182251,
+    "static": {
+     "psnr": 20.0975,
+     "ssim": 0.7236,
+     "lpips": 0.670554518699646
+    }
+   },
+   "copy_nearest": {
+    "psnr": 20.3594,
+    "ssim": 0.6841,
+    "lpips": 0.11423620581626892,
+    "static": {
+     "psnr": 20.3594,
+     "ssim": 0.6841,
+     "lpips": 0.11423592269420624
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 13428,
+     "median_abs_m": 7.6886,
+     "mean_abs_m": 9.9125,
+     "within_tol": 0.0144,
+     "abs_rel": 0.3772
+    },
+    "init_only": {
+     "n": 13428,
+     "median_abs_m": 5.7987,
+     "mean_abs_m": 10.6509,
+     "within_tol": 0.1277,
+     "abs_rel": 0.4396
+    }
+   }
+  },
+  {
+   "frame": 60,
+   "nearest_train": 59,
+   "3dgs": {
+    "psnr": 30.1203,
+    "ssim": 0.896,
+    "lpips": 0.15034383535385132,
+    "static": {
+     "psnr": 30.1203,
+     "ssim": 0.896,
+     "lpips": 0.15034477412700653
+    }
+   },
+   "init_only": {
+    "psnr": 19.858,
+    "ssim": 0.7201,
+    "lpips": 0.7101663947105408,
+    "static": {
+     "psnr": 19.858,
+     "ssim": 0.7201,
+     "lpips": 0.710168182849884
+    }
+   },
+   "copy_nearest": {
+    "psnr": 21.9306,
+    "ssim": 0.6776,
+    "lpips": 0.13834908604621887,
+    "static": {
+     "psnr": 21.9306,
+     "ssim": 0.6776,
+     "lpips": 0.13834793865680695
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 13841,
+     "median_abs_m": 7.3557,
+     "mean_abs_m": 9.516,
+     "within_tol": 0.0129,
+     "abs_rel": 0.3958
+    },
+    "init_only": {
+     "n": 13841,
+     "median_abs_m": 6.2897,
+     "mean_abs_m": 11.5373,
+     "within_tol": 0.1291,
+     "abs_rel": 0.5022
+    }
+   }
+  },
+  {
+   "frame": 68,
+   "nearest_train": 67,
+   "3dgs": {
+    "psnr": 30.3554,
+    "ssim": 0.8686,
+    "lpips": 0.17820866405963898,
+    "static": {
+     "psnr": 30.3554,
+     "ssim": 0.8686,
+     "lpips": 0.17820923030376434
+    }
+   },
+   "init_only": {
+    "psnr": 18.7836,
+    "ssim": 0.6721,
+    "lpips": 0.7716488838195801,
+    "static": {
+     "psnr": 18.7836,
+     "ssim": 0.6721,
+     "lpips": 0.771653413772583
+    }
+   },
+   "copy_nearest": {
+    "psnr": 22.3727,
+    "ssim": 0.6328,
+    "lpips": 0.18083149194717407,
+    "static": {
+     "psnr": 22.3727,
+     "ssim": 0.6328,
+     "lpips": 0.18082912266254425
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 13778,
+     "median_abs_m": 7.2841,
+     "mean_abs_m": 9.2843,
+     "within_tol": 0.0212,
+     "abs_rel": 0.3846
+    },
+    "init_only": {
+     "n": 13778,
+     "median_abs_m": 7.6386,
+     "mean_abs_m": 12.8404,
+     "within_tol": 0.106,
+     "abs_rel": 0.592
+    }
+   }
+  },
+  {
+   "frame": 76,
+   "nearest_train": 75,
+   "3dgs": {
+    "psnr": 27.0573,
+    "ssim": 0.8157,
+    "lpips": 0.1806049644947052,
+    "static": {
+     "psnr": 27.0573,
+     "ssim": 0.8157,
+     "lpips": 0.18060629069805145
+    }
+   },
+   "init_only": {
+    "psnr": 15.7842,
+    "ssim": 0.5645,
+    "lpips": 0.8260520696640015,
+    "static": {
+     "psnr": 15.7842,
+     "ssim": 0.5645,
+     "lpips": 0.8260561227798462
+    }
+   },
+   "copy_nearest": {
+    "psnr": 19.3483,
+    "ssim": 0.5315,
+    "lpips": 0.20382578670978546,
+    "static": {
+     "psnr": 19.3483,
+     "ssim": 0.5315,
+     "lpips": 0.20382890105247498
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 14039,
+     "median_abs_m": 5.9081,
+     "mean_abs_m": 8.691,
+     "within_tol": 0.0248,
+     "abs_rel": 0.328
+    },
+    "init_only": {
+     "n": 14039,
+     "median_abs_m": 5.9977,
+     "mean_abs_m": 11.8918,
+     "within_tol": 0.1278,
+     "abs_rel": 0.5326
+    }
+   }
+  },
+  {
+   "frame": 84,
+   "nearest_train": 83,
+   "3dgs": {
+    "psnr": 23.7727,
+    "ssim": 0.7683,
+    "lpips": 0.1692419946193695,
+    "static": {
+     "psnr": 23.7727,
+     "ssim": 0.7683,
+     "lpips": 0.16924485564231873
+    }
+   },
+   "init_only": {
+    "psnr": 16.2121,
+    "ssim": 0.543,
+    "lpips": 0.805650532245636,
+    "static": {
+     "psnr": 16.2121,
+     "ssim": 0.543,
+     "lpips": 0.8056578040122986
+    }
+   },
+   "copy_nearest": {
+    "psnr": 18.5798,
+    "ssim": 0.4825,
+    "lpips": 0.22230929136276245,
+    "static": {
+     "psnr": 18.5798,
+     "ssim": 0.4825,
+     "lpips": 0.22230911254882812
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 13442,
+     "median_abs_m": 3.7797,
+     "mean_abs_m": 4.7557,
+     "within_tol": 0.0723,
+     "abs_rel": 0.1873
+    },
+    "init_only": {
+     "n": 13442,
+     "median_abs_m": 4.68,
+     "mean_abs_m": 9.7508,
+     "within_tol": 0.1433,
+     "abs_rel": 0.4686
+    }
+   }
+  },
+  {
+   "frame": 92,
+   "nearest_train": 91,
+   "3dgs": {
+    "psnr": 24.4065,
+    "ssim": 0.8208,
+    "lpips": 0.13773640990257263,
+    "static": {
+     "psnr": 24.4065,
+     "ssim": 0.8208,
+     "lpips": 0.1377369910478592
+    }
+   },
+   "init_only": {
+    "psnr": 17.1714,
+    "ssim": 0.5667,
+    "lpips": 0.7963218092918396,
+    "static": {
+     "psnr": 17.1714,
+     "ssim": 0.5667,
+     "lpips": 0.7963225841522217
+    }
+   },
+   "copy_nearest": {
+    "psnr": 17.7165,
+    "ssim": 0.493,
+    "lpips": 0.2014036327600479,
+    "static": {
+     "psnr": 17.7165,
+     "ssim": 0.493,
+     "lpips": 0.20140290260314941
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 12056,
+     "median_abs_m": 3.8217,
+     "mean_abs_m": 4.8005,
+     "within_tol": 0.0709,
+     "abs_rel": 0.1888
+    },
+    "init_only": {
+     "n": 12056,
+     "median_abs_m": 3.668,
+     "mean_abs_m": 7.7285,
+     "within_tol": 0.1673,
+     "abs_rel": 0.3425
+    }
+   }
+  },
+  {
+   "frame": 100,
+   "nearest_train": 99,
+   "3dgs": {
+    "psnr": 25.2829,
+    "ssim": 0.8524,
+    "lpips": 0.13165290653705597,
+    "static": {
+     "psnr": 25.2829,
+     "ssim": 0.8524,
+     "lpips": 0.131653293967247
+    }
+   },
+   "init_only": {
+    "psnr": 16.5087,
+    "ssim": 0.5792,
+    "lpips": 0.7884841561317444,
+    "static": {
+     "psnr": 16.5087,
+     "ssim": 0.5792,
+     "lpips": 0.7884877324104309
+    }
+   },
+   "copy_nearest": {
+    "psnr": 17.4875,
+    "ssim": 0.5227,
+    "lpips": 0.15723399817943573,
+    "static": {
+     "psnr": 17.4875,
+     "ssim": 0.5227,
+     "lpips": 0.157234787940979
+    }
+   },
+   "moving_px_frac": 0.0,
+   "depth": {
+    "3dgs": {
+     "n": 11446,
+     "median_abs_m": 3.1115,
+     "mean_abs_m": 4.4918,
+     "within_tol": 0.0697,
+     "abs_rel": 0.1763
+    },
+    "init_only": {
+     "n": 11446,
+     "median_abs_m": 2.8191,
+     "mean_abs_m": 5.3179,
+     "within_tol": 0.1948,
+     "abs_rel": 0.2308
+    }
+   }
+  },
+  {
+   "frame": 108,
+   "nearest_train": 107,
+   "3dgs": {
+    "psnr": 27.084,
+    "ssim": 0.8785,
+    "lpips": 0.11466555297374725,
+    "static": {
+     "psnr": 27.0517,
+     "ssim": 0.879,
+     "lpips": 0.11490160971879959
+    }
+   },
+   "init_only": {
+    "psnr": 16.9398,
+    "ssim": 0.5985,
+    "lpips": 0.7529512643814087,
+    "static": {
+     "psnr": 16.8968,
+     "ssim": 0.5995,
+     "lpips": 0.7538071274757385
+    }
+   },
+   "copy_nearest": {
+    "psnr": 18.7689,
+    "ssim": 0.5545,
+    "lpips": 0.12734898924827576,
+    "static": {
+     "psnr": 18.7303,
+     "ssim": 0.5557,
+     "lpips": 0.12740226089954376
+    }
+   },
+   "moving_px_frac": 0.01395,
+   "depth": {
+    "3dgs": {
+     "n": 11120,
+     "median_abs_m": 2.7609,
+     "mean_abs_m": 4.5374,
+     "within_tol": 0.0981,
+     "abs_rel": 0.1796
+    },
+    "init_only": {
+     "n": 11120,
+     "median_abs_m": 2.7317,
+     "mean_abs_m": 5.5851,
+     "within_tol": 0.1945,
+     "abs_rel": 0.2442
+    }
+   }
+  },
+  {
+   "frame": 116,
+   "nearest_train": 115,
+   "3dgs": {
+    "psnr": 28.3538,
+    "ssim": 0.9022,
+    "lpips": 0.09172207117080688,
+    "static": {
+     "psnr": 28.4316,
+     "ssim": 0.9037,
+     "lpips": 0.09123177081346512
+    }
+   },
+   "init_only": {
+    "psnr": 17.6518,
+    "ssim": 0.6022,
+    "lpips": 0.7456398606300354,
+    "static": {
+     "psnr": 17.606,
+     "ssim": 0.6057,
+     "lpips": 0.7445353865623474
+    }
+   },
+   "copy_nearest": {
+    "psnr": 19.0416,
+    "ssim": 0.5946,
+    "lpips": 0.11300201714038849,
+    "static": {
+     "psnr": 18.97,
+     "ssim": 0.5925,
+     "lpips": 0.11194481700658798
+    }
+   },
+   "moving_px_frac": 0.0245,
+   "depth": {
+    "3dgs": {
+     "n": 11036,
+     "median_abs_m": 2.5347,
+     "mean_abs_m": 4.6795,
+     "within_tol": 0.1069,
+     "abs_rel": 0.2002
+    },
+    "init_only": {
+     "n": 11036,
+     "median_abs_m": 2.6058,
+     "mean_abs_m": 5.4365,
+     "within_tol": 0.2095,
+     "abs_rel": 0.2481
+    }
+   }
+  },
+  {
+   "frame": 124,
+   "nearest_train": 123,
+   "3dgs": {
+    "psnr": 28.2554,
+    "ssim": 0.9005,
+    "lpips": 0.08076287060976028,
+    "static": {
+     "psnr": 28.2123,
+     "ssim": 0.9011,
+     "lpips": 0.08148793876171112
+    }
+   },
+   "init_only": {
+    "psnr": 17.4514,
+    "ssim": 0.58,
+    "lpips": 0.7626878023147583,
+    "static": {
+     "psnr": 17.4178,
+     "ssim": 0.586,
+     "lpips": 0.7606761455535889
+    }
+   },
+   "copy_nearest": {
+    "psnr": 19.0425,
+    "ssim": 0.615,
+    "lpips": 0.10941498726606369,
+    "static": {
+     "psnr": 18.9379,
+     "ssim": 0.6136,
+     "lpips": 0.1101439893245697
+    }
+   },
+   "moving_px_frac": 0.03299,
+   "depth": {
+    "3dgs": {
+     "n": 11408,
+     "median_abs_m": 2.925,
+     "mean_abs_m": 5.434,
+     "within_tol": 0.082,
+     "abs_rel": 0.2266
+    },
+    "init_only": {
+     "n": 11408,
+     "median_abs_m": 3.1381,
+     "mean_abs_m": 6.1949,
+     "within_tol": 0.1886,
+     "abs_rel": 0.278
+    }
+   }
+  },
+  {
+   "frame": 132,
+   "nearest_train": 131,
+   "3dgs": {
+    "psnr": 28.2756,
+    "ssim": 0.9031,
+    "lpips": 0.09276463091373444,
+    "static": {
+     "psnr": 28.1901,
+     "ssim": 0.9017,
+     "lpips": 0.09534056484699249
+    }
+   },
+   "init_only": {
+    "psnr": 16.9053,
+    "ssim": 0.5645,
+    "lpips": 0.794306218624115,
+    "static": {
+     "psnr": 16.9058,
+     "ssim": 0.5757,
+     "lpips": 0.790638267993927
+    }
+   },
+   "copy_nearest": {
+    "psnr": 18.303,
+    "ssim": 0.6056,
+    "lpips": 0.12290710210800171,
+    "static": {
+     "psnr": 18.2459,
+     "ssim": 0.6115,
+     "lpips": 0.12341750413179398
+    }
+   },
+   "moving_px_frac": 0.04084,
+   "depth": {
+    "3dgs": {
+     "n": 10718,
+     "median_abs_m": 2.5909,
+     "mean_abs_m": 6.1771,
+     "within_tol": 0.1201,
+     "abs_rel": 0.2606
+    },
+    "init_only": {
+     "n": 10718,
+     "median_abs_m": 3.5543,
+     "mean_abs_m": 6.7356,
+     "within_tol": 0.1762,
+     "abs_rel": 0.2913
+    }
+   }
+  },
+  {
+   "frame": 140,
+   "nearest_train": 139,
+   "3dgs": {
+    "psnr": 27.6522,
+    "ssim": 0.8961,
+    "lpips": 0.08397699892520905,
+    "static": {
+     "psnr": 27.6425,
+     "ssim": 0.8961,
+     "lpips": 0.08396955579519272
+    }
+   },
+   "init_only": {
+    "psnr": 15.4002,
+    "ssim": 0.5375,
+    "lpips": 0.8243372440338135,
+    "static": {
+     "psnr": 15.3848,
+     "ssim": 0.551,
+     "lpips": 0.8222565650939941
+    }
+   },
+   "copy_nearest": {
+    "psnr": 17.1564,
+    "ssim": 0.5901,
+    "lpips": 0.1343042254447937,
+    "static": {
+     "psnr": 17.1179,
+     "ssim": 0.6023,
+     "lpips": 0.13454478979110718
+    }
+   },
+   "moving_px_frac": 0.05238,
+   "depth": {
+    "3dgs": {
+     "n": 10986,
+     "median_abs_m": 3.2846,
+     "mean_abs_m": 7.0107,
+     "within_tol": 0.0948,
+     "abs_rel": 0.3034
+    },
+    "init_only": {
+     "n": 10986,
+     "median_abs_m": 4.1389,
+     "mean_abs_m": 6.8067,
+     "within_tol": 0.1562,
+     "abs_rel": 0.3007
+    }
+   }
+  },
+  {
+   "frame": 148,
+   "nearest_train": 147,
+   "3dgs": {
+    "psnr": 28.2619,
+    "ssim": 0.9216,
+    "lpips": 0.09465712308883667,
+    "static": {
+     "psnr": 28.2963,
+     "ssim": 0.9244,
+     "lpips": 0.09364422410726547
+    }
+   },
+   "init_only": {
+    "psnr": 14.1059,
+    "ssim": 0.5863,
+    "lpips": 0.782760739326477,
+    "static": {
+     "psnr": 14.0043,
+     "ssim": 0.6023,
+     "lpips": 0.7787491679191589
+    }
+   },
+   "copy_nearest": {
+    "psnr": 17.6707,
+    "ssim": 0.6315,
+    "lpips": 0.11867500841617584,
+    "static": {
+     "psnr": 17.5333,
+     "ssim": 0.6349,
+     "lpips": 0.12066236883401871
+    }
+   },
+   "moving_px_frac": 0.06809,
+   "depth": {
+    "3dgs": {
+     "n": 11213,
+     "median_abs_m": 4.0111,
+     "mean_abs_m": 8.9596,
+     "within_tol": 0.1049,
+     "abs_rel": 0.4422
+    },
+    "init_only": {
+     "n": 11213,
+     "median_abs_m": 3.7684,
+     "mean_abs_m": 6.7332,
+     "within_tol": 0.2088,
+     "abs_rel": 0.2673
+    }
+   }
+  },
+  {
+   "frame": 156,
+   "nearest_train": 155,
+   "3dgs": {
+    "psnr": 30.4007,
+    "ssim": 0.943,
+    "lpips": 0.08616060018539429,
+    "static": {
+     "psnr": 30.4062,
+     "ssim": 0.9458,
+     "lpips": 0.08479335904121399
+    }
+   },
+   "init_only": {
+    "psnr": 13.6454,
+    "ssim": 0.6341,
+    "lpips": 0.781863808631897,
+    "static": {
+     "psnr": 13.3591,
+     "ssim": 0.6476,
+     "lpips": 0.7811648845672607
+    }
+   },
+   "copy_nearest": {
+    "psnr": 20.7889,
+    "ssim": 0.7863,
+    "lpips": 0.05945383757352829,
+    "static": {
+     "psnr": 20.5269,
+     "ssim": 0.7952,
+     "lpips": 0.06164199858903885
+    }
+   },
+   "moving_px_frac": 0.08879,
+   "depth": {
+    "3dgs": {
+     "n": 10861,
+     "median_abs_m": 5.1612,
+     "mean_abs_m": 10.5619,
+     "within_tol": 0.0583,
+     "abs_rel": 0.6123
+    },
+    "init_only": {
+     "n": 10861,
+     "median_abs_m": 3.9402,
+     "mean_abs_m": 7.2818,
+     "within_tol": 0.2023,
+     "abs_rel": 0.2679
+    }
+   }
+  }
+ ],
+ "heldout_3dgs_beats_copy_nearest": 20,
+ "heldout_static_mean": {
+  "3dgs": {
+   "psnr": 29.8636,
+   "ssim": 0.9021,
+   "lpips": 0.1073
+  },
+  "init_only": {
+   "psnr": 17.7356,
+   "ssim": 0.651,
+   "lpips": 0.729
+  },
+  "copy_nearest": {
+   "psnr": 20.6702,
+   "ssim": 0.6528,
+   "lpips": 0.1179
+  }
+ },
+ "heldout_static_3dgs_beats_copy_nearest": 20,
+ "static_mask": {
+  "source": "AV2 cuboids with speed > 1.0 m/s, padded 0.25 m",
+  "heldout_moving_px_frac_mean": 0.01608,
+  "heldout_frames_with_moving": 7
+ },
+ "heldout_depth": {
+  "leak_free": false,
+  "tol_m": 0.5,
+  "range_m": [
+   0.5,
+   80.0
+  ],
+  "gt": "held-out frame's reserved lidar sweep (time-nearest, never used in training), z-depth",
+  "pooling": "all lidar pixels of the 20 held-out frames pooled",
+  "3dgs": {
+   "all": {
+    "n": 243518,
+    "median_abs_m": 4.8046,
+    "mean_abs_m": 7.7554,
+    "within_tol": 0.0502,
+    "abs_rel": 0.2993,
+    "by_range": {
+     "0-10m": {
+      "n": 24989,
+      "median_abs_m": 1.3627,
+      "mean_abs_m": 3.2692,
+      "within_tol": 0.1378,
+      "abs_rel": 0.4114
+     },
+     "10-20m": {
+      "n": 69178,
+      "median_abs_m": 2.6527,
+      "mean_abs_m": 4.1132,
+      "within_tol": 0.0851,
+      "abs_rel": 0.2721
+     },
+     "20-40m": {
+      "n": 116711,
+      "median_abs_m": 6.5541,
+      "mean_abs_m": 8.4726,
+      "within_tol": 0.0224,
+      "abs_rel": 0.2907
+     },
+     "40-80m": {
+      "n": 32640,
+      "median_abs_m": 14.9583,
+      "mean_abs_m": 16.3452,
+      "within_tol": 0.0084,
+      "abs_rel": 0.3021
+     }
+    }
+   },
+   "static": {
+    "n": 231741,
+    "median_abs_m": 4.8068,
+    "mean_abs_m": 7.5553,
+    "within_tol": 0.0454,
+    "abs_rel": 0.2658,
+    "by_range": {
+     "0-10m": {
+      "n": 21726,
+      "median_abs_m": 1.3251,
+      "mean_abs_m": 1.5589,
+      "within_tol": 0.1211,
+      "abs_rel": 0.2151
+     },
+     "10-20m": {
+      "n": 64683,
+      "median_abs_m": 2.6072,
+      "mean_abs_m": 3.4521,
+      "within_tol": 0.0806,
+      "abs_rel": 0.2185
+     },
+     "20-40m": {
+      "n": 113013,
+      "median_abs_m": 6.6569,
+      "mean_abs_m": 8.5324,
+      "within_tol": 0.0213,
+      "abs_rel": 0.2921
+     },
+     "40-80m": {
+      "n": 32319,
+      "median_abs_m": 14.9951,
+      "mean_abs_m": 16.3818,
+      "within_tol": 0.0084,
+      "abs_rel": 0.3024
+     }
+    }
+   }
+  },
+  "init_only": {
+   "all": {
+    "n": 243518,
+    "median_abs_m": 4.2637,
+    "mean_abs_m": 8.5292,
+    "within_tol": 0.1601,
+    "abs_rel": 0.3497,
+    "by_range": {
+     "0-10m": {
+      "n": 24989,
+      "median_abs_m": 0.2123,
+      "mean_abs_m": 1.591,
+      "within_tol": 0.738,
+      "abs_rel": 0.2051
+     },
+     "10-20m": {
+      "n": 69178,
+      "median_abs_m": 2.3549,
+      "mean_abs_m": 6.745,
+      "within_tol": 0.1972,
+      "abs_rel": 0.4348
+     },
+     "20-40m": {
+      "n": 116711,
+      "median_abs_m": 5.7943,
+      "mean_abs_m": 10.7449,
+      "within_tol": 0.0472,
+      "abs_rel": 0.3784
+     },
+     "40-80m": {
+      "n": 32640,
+      "median_abs_m": 7.2603,
+      "mean_abs_m": 9.6995,
+      "within_tol": 0.0428,
+      "abs_rel": 0.1773
+     }
+    }
+   },
+   "static": {
+    "n": 231741,
+    "median_abs_m": 4.3257,
+    "mean_abs_m": 8.6602,
+    "within_tol": 0.1607,
+    "abs_rel": 0.3509,
+    "by_range": {
+     "0-10m": {
+      "n": 21726,
+      "median_abs_m": 0.1912,
+      "mean_abs_m": 1.4562,
+      "within_tol": 0.8016,
+      "abs_rel": 0.1911
+     },
+     "10-20m": {
+      "n": 64683,
+      "median_abs_m": 2.3731,
+      "mean_abs_m": 6.9198,
+      "within_tol": 0.2016,
+      "abs_rel": 0.4436
+     },
+     "20-40m": {
+      "n": 113013,
+      "median_abs_m": 5.6832,
+      "mean_abs_m": 10.7613,
+      "within_tol": 0.0478,
+      "abs_rel": 0.3788
+     },
+     "40-80m": {
+      "n": 32319,
+      "median_abs_m": 7.2407,
+      "mean_abs_m": 9.639,
+      "within_tol": 0.043,
+      "abs_rel": 0.1757
+     }
+    }
+   }
+  }
+ }
+}
