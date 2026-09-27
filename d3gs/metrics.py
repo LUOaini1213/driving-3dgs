@@ -40,6 +40,22 @@ def _filter_valid(img: np.ndarray, g: np.ndarray) -> np.ndarray:
     return out
 
 
+def _ssim_maps(a: np.ndarray, b: np.ndarray, data_range: float) -> list[np.ndarray]:
+    """Per-channel SSIM maps on the 'valid' region, shape (H - 10, W - 10)."""
+    g = _gaussian_kernel()
+    C1 = (0.01 * data_range) ** 2
+    C2 = (0.03 * data_range) ** 2
+    maps = []
+    for c in range(a.shape[-1]):
+        x, y = a[..., c], b[..., c]
+        mx, my = _filter_valid(x, g), _filter_valid(y, g)
+        sxx = _filter_valid(x * x, g) - mx * mx
+        syy = _filter_valid(y * y, g) - my * my
+        sxy = _filter_valid(x * y, g) - mx * my
+        maps.append(((2 * mx * my + C1) * (2 * sxy + C2)) / ((mx * mx + my * my + C1) * (sxx + syy + C2)))
+    return maps
+
+
 def ssim(a: np.ndarray, b: np.ndarray, data_range: float = 1.0) -> float:
     a = np.asarray(a, dtype=np.float64)
     b = np.asarray(b, dtype=np.float64)
@@ -47,16 +63,28 @@ def ssim(a: np.ndarray, b: np.ndarray, data_range: float = 1.0) -> float:
         raise ValueError(f"shape mismatch {a.shape} vs {b.shape}")
     if a.ndim == 2:
         a, b = a[..., None], b[..., None]
-    g = _gaussian_kernel()
-    C1 = (0.01 * data_range) ** 2
-    C2 = (0.03 * data_range) ** 2
-    vals = []
-    for c in range(a.shape[-1]):
-        x, y = a[..., c], b[..., c]
-        mx, my = _filter_valid(x, g), _filter_valid(y, g)
-        sxx = _filter_valid(x * x, g) - mx * mx
-        syy = _filter_valid(y * y, g) - my * my
-        sxy = _filter_valid(x * y, g) - mx * my
-        m = ((2 * mx * my + C1) * (2 * sxy + C2)) / ((mx * mx + my * my + C1) * (sxx + syy + C2))
-        vals.append(m.mean())
-    return float(np.mean(vals))
+    return float(np.mean([m.mean() for m in _ssim_maps(a, b, data_range)]))
+
+
+def psnr_masked(a: np.ndarray, b: np.ndarray, keep: np.ndarray, data_range: float = 1.0) -> float:
+    """PSNR over the pixels where ``keep`` (H, W) is True (all channels of those pixels)."""
+    a = np.asarray(a, dtype=np.float64)
+    b = np.asarray(b, dtype=np.float64)
+    keep = np.asarray(keep, dtype=bool)
+    if a.shape != b.shape or keep.shape != a.shape[:2]:
+        raise ValueError("shape mismatch")
+    if not keep.any():
+        return float("nan")
+    return psnr(a[keep], b[keep], data_range)
+
+
+def ssim_masked(a: np.ndarray, b: np.ndarray, keep: np.ndarray, data_range: float = 1.0) -> float:
+    """Mean of the SSIM map over window centres where ``keep`` is True (same recipe as ``ssim``)."""
+    a = np.asarray(a, dtype=np.float64)
+    b = np.asarray(b, dtype=np.float64)
+    keep = np.asarray(keep, dtype=bool)
+    r = (len(_gaussian_kernel()) - 1) // 2
+    kc = keep[r:keep.shape[0] - r, r:keep.shape[1] - r]   # 'valid' map is offset by the window radius
+    if not kc.any():
+        return float("nan")
+    return float(np.mean([m[kc].mean() for m in _ssim_maps(a, b, data_range)]))

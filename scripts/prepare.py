@@ -8,6 +8,10 @@ Steps
   5. lidar init: sweeps -> world, keep points seen by >=1 TRAIN camera, colour them
      from the time-nearest train image; plus a far 'sky shell' sampled from train images.
      Held-out images are never read here.
+  6. (--strict-lidar) the time-nearest lidar sweep of every held-out frame is reserved for depth
+     evaluation: it is excluded from the init, and sparse depth maps for TRAIN frames are built only from
+     the remaining sweeps (see d3gs/lidar.py). Held-out depth maps go to eval_depth/ (read only by evaluate.py).
+  7. (--masks) per-frame masks of moving objects / all vehicles from the AV2 cuboid annotations.
 
 Usage:
   python scripts/prepare.py --log-dir D:/driving-3dgs/data/<log> --out D:/driving-3dgs/work/<log>
@@ -26,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from d3gs.av2io import list_frames, list_sweeps, load_camera_calib, load_poses, load_sweep_xyz  # noqa: E402
 from d3gs.geometry import project, resize_intrinsics, se3_inverse, transform_points  # noqa: E402
 from d3gs.split import holdout_split  # noqa: E402
+from d3gs.lidar import assert_no_lidar_leak, depth_map, nearest_sweep, split_sweeps  # noqa: E402
 
 
 def voxel_downsample(pts: np.ndarray, cols: np.ndarray, voxel: float):
@@ -49,6 +54,12 @@ def main() -> None:
     ap.add_argument("--max-lidar-pts", type=int, default=200_000)
     ap.add_argument("--n-sky", type=int, default=20_000)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--lidar-every", type=int, default=2,
+                    help="init uses every k-th sweep found in the log folder (2 = the original 40-sweep set)")
+    ap.add_argument("--strict-lidar", action="store_true",
+                    help="reserve held-out frames' nearest sweeps for evaluation; write train depth + eval depth")
+    ap.add_argument("--masks", action="store_true", help="write moving-object / vehicle masks from annotations")
+    ap.add_argument("--speed-thresh", type=float, default=1.0, help="m/s; faster objects count as moving")
     args = ap.parse_args()
 
     log_dir, out = Path(args.log_dir), Path(args.out)
@@ -85,8 +96,14 @@ def main() -> None:
     # --- lidar init (train cameras only) -------------------------------------
     t_frames = np.array([t for t, _ in frames])
     w2c = se3_inverse(c2w)
+    sweeps = list_sweeps(log_dir)
+    sweep_ts = np.array([t for t, _ in sweeps], dtype=np.int64)
+    init_idx = list(range(0, len(sweeps), args.lidar_every))
+    train_sw, eval_sw = split_sweeps(sweep_ts, t_frames, test)
+    if args.strict_lidar:
+        init_idx = [k for k in init_idx if k not in set(eval_sw)]
     all_p, all_c, n_raw = [], [], 0
-    for ts, sp in list_sweeps(log_dir):
+    for ts, sp in [sweeps[k] for k in init_idx]:
         xyz = load_sweep_xyz(sp)
         n_raw += len(xyz)
         r = np.linalg.norm(xyz[:, :2], axis=1)
@@ -138,8 +155,75 @@ def main() -> None:
         "trajectory_length_m": float(np.linalg.norm(np.diff(c2w[:, :3, 3], axis=0), axis=1).sum()),
         "duration_s": (t_frames[-1] - t_frames[0]) / 1e9,
     }
+    # --- lidar bookkeeping + depth maps -------------------------------------
+    split = {"policy": "strict" if args.strict_lidar else "legacy", "sweep_ts": sweep_ts.tolist(),
+             "eval_sweep_ts": sweep_ts[eval_sw].tolist(), "init_sweep_ts": sweep_ts[init_idx].tolist(),
+             "depth_sweep_ts": []}
+    if args.strict_lidar:
+        assert_no_lidar_leak(split["init_sweep_ts"], split["eval_sweep_ts"])
+
+    # --- dynamic-object masks --------------------------------------------------
+    mask_stats = None
+    if args.masks or args.strict_lidar:
+        import pandas as pd
+        from d3gs.dynamic import build_tracks, frame_masks
+        ann = pd.read_feather(log_dir / "annotations.feather")
+        tracks = build_tracks(ann, poses, int(t_frames[0] - 1e9), int(t_frames[-1] + 1e9))
+        fr_mov, fr_veh, n_mov_obj = [], [], []
+        for kind in ("moving", "vehicles"):
+            (out / "masks" / kind).mkdir(parents=True, exist_ok=True)
+        moving_masks = {}
+        for i, (t, _) in enumerate(frames):
+            mov, veh, n = frame_masks(tracks, int(t), K, city_SE3_cam[i], args.width, args.height, args.speed_thresh)
+            cv2.imwrite(str(out / "masks" / "moving" / f"{i:04d}.png"), mov.astype(np.uint8) * 255)
+            cv2.imwrite(str(out / "masks" / "vehicles" / f"{i:04d}.png"), veh.astype(np.uint8) * 255)
+            moving_masks[i] = mov
+            fr_mov.append(float(mov.mean()))
+            fr_veh.append(float(veh.mean()))
+            n_mov_obj.append(n)
+        mask_stats = {"speed_thresh_mps": args.speed_thresh, "pad_m": 0.25,
+                      "moving_px_frac_mean_train": float(np.mean([fr_mov[i] for i in train])),
+                      "moving_px_frac_mean_test": float(np.mean([fr_mov[i] for i in test])),
+                      "vehicle_px_frac_mean_train": float(np.mean([fr_veh[i] for i in train])),
+                      "frames_with_moving_object": int(sum(n > 0 for n in n_mov_obj)),
+                      "max_moving_objects_in_frame": int(max(n_mov_obj)),
+                      "per_frame_moving_frac": [round(x, 5) for x in fr_mov]}
+
+    if args.strict_lidar:
+        (out / "depth").mkdir(exist_ok=True)
+        (out / "eval_depth").mkdir(exist_ok=True)
+        cache: dict[int, np.ndarray] = {}
+
+        def sweep_world(k: int) -> np.ndarray:
+            if k not in cache:
+                xyz = load_sweep_xyz(sweeps[k][1])
+                r = np.linalg.norm(xyz[:, :2], axis=1)
+                cache[k] = transform_points(poses.city_SE3_ego(int(sweep_ts[k])), xyz[(r > 3.0) & (r < 80.0)]) - origin
+            return cache[k]
+
+        used_depth, n_px = set(), []
+        for i in train:
+            k = nearest_sweep(sweep_ts, t_frames[i], train_sw)
+            used_depth.add(int(sweep_ts[k]))
+            D = depth_map(K, w2c[i], sweep_world(k), args.width, args.height)
+            D[moving_masks[i]] = 0.0             # moving objects were elsewhere at the sweep time
+            n_px.append(int((D > 0).sum()))
+            np.save(out / "depth" / f"{i:04d}.npy", D)
+        for i in test:
+            k = nearest_sweep(sweep_ts, t_frames[i], eval_sw)
+            D = depth_map(K, w2c[i], sweep_world(k), args.width, args.height)
+            np.save(out / "eval_depth" / f"{i:04d}.npy", D)
+        split["depth_sweep_ts"] = sorted(used_depth)
+        assert_no_lidar_leak(split["depth_sweep_ts"] + split["init_sweep_ts"], split["eval_sweep_ts"])
+        split["train_depth_px_per_frame_mean"] = float(np.mean(n_px))
+    (out / "lidar_split.json").write_text(json.dumps(split, indent=1))
+    cams["lidar"] = {k: (len(v) if isinstance(v, list) else v) for k, v in split.items()}
+    if mask_stats is not None:
+        cams["masks"] = mask_stats
     (out / "cameras.json").write_text(json.dumps(cams, indent=1))
-    print(json.dumps({k: v for k, v in cams.items() if k not in ("frames", "train", "test")}, indent=1))
+    print(json.dumps({k: v for k, v in cams.items() if k not in ("frames", "train", "test", "masks")}, indent=1))
+    if mask_stats is not None:
+        print(json.dumps({k: v for k, v in mask_stats.items() if k != "per_frame_moving_frac"}, indent=1))
     print(f"train {len(train)} / test {len(test)} frames")
 
 

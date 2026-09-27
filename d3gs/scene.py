@@ -41,6 +41,31 @@ class Scene:
     def viewmat(self, i: int) -> torch.Tensor:
         return torch.linalg.inv(self.c2w[i])
 
+    def mask(self, i: int, kind: str = "moving") -> np.ndarray:
+        """bool (H, W): True = pixel covered by a moving object ('moving') or any vehicle ('vehicles')."""
+        import cv2
+        p = self.dir / "masks" / kind / f"{i:04d}.png"
+        if not p.exists():
+            raise FileNotFoundError(f"{p} (run prepare.py with --masks)")
+        return cv2.imread(str(p), cv2.IMREAD_GRAYSCALE) > 0
+
+    @property
+    def lidar_split(self) -> dict | None:
+        p = self.dir / "lidar_split.json"
+        return json.loads(p.read_text()) if p.exists() else None
+
+    def train_depth(self, i: int) -> np.ndarray:
+        """Sparse lidar z-depth (H, W) for a TRAIN frame (0 = no return). Refuses held-out frames."""
+        if i not in self.train:
+            raise PermissionError(f"frame {i} is not a train frame; its lidar is reserved for evaluation")
+        return np.load(self.dir / "depth" / f"{i:04d}.npy")
+
+    def eval_depth(self, i: int) -> np.ndarray:
+        """Sparse lidar depth of a HELD-OUT frame from its reserved evaluation sweep (evaluation only)."""
+        if i not in self.test:
+            raise PermissionError(f"frame {i} is not held out")
+        return np.load(self.dir / "eval_depth" / f"{i:04d}.npy")
+
 
 def init_params(xyz: np.ndarray, rgb: np.ndarray, sh_degree: int, device: str) -> torch.nn.ParameterDict:
     pts = torch.tensor(xyz, dtype=torch.float32)
@@ -64,16 +89,20 @@ def init_params(xyz: np.ndarray, rgb: np.ndarray, sh_degree: int, device: str) -
     }).to(device)
 
 
-def render(params, viewmat: torch.Tensor, K: torch.Tensor, W: int, H: int, sh_degree: int):
+def render(params, viewmat: torch.Tensor, K: torch.Tensor, W: int, H: int, sh_degree: int, with_depth: bool = False):
+    """Returns (rgb (H,W,3), alpha (H,W,1), info) or, with_depth, (rgb, alpha, info, expected z-depth (H,W))."""
     from gsplat import rasterization
     colors = torch.cat([params["sh0"], params["shN"]], 1)
-    img, alpha, info = rasterization(
+    out, alpha, info = rasterization(
         means=params["means"], quats=params["quats"], scales=torch.exp(params["scales"]),
         opacities=torch.sigmoid(params["opacities"]), colors=colors,
         viewmats=viewmat[None], Ks=K[None], width=W, height=H, sh_degree=sh_degree,
-        packed=False,
+        packed=False, render_mode="RGB+ED" if with_depth else "RGB",
     )
-    return img[0].clamp(0, 1), alpha[0], info
+    img = out[0, ..., :3].clamp(0, 1)
+    if with_depth:
+        return img, alpha[0], info, out[0, ..., 3]
+    return img, alpha[0], info
 
 
 def _gauss_window(size=11, sigma=1.5, device="cpu"):

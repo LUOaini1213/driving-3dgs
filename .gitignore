@@ -6,6 +6,8 @@
 *.feather
 *.png
 *.splat
+# pruned web asset (< 20 MB, checked by check_readme.py) is committed
+!docs/splat/*.splat
 /data/
 /work/
 /runs/

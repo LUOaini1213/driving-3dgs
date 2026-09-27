@@ -17,6 +17,7 @@ import numpy as np
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from d3gs.lidar import assert_no_lidar_leak  # noqa: E402
 from d3gs.scene import Scene, exp_lr, init_params, render, ssim_torch  # noqa: E402
 
 
@@ -30,6 +31,10 @@ def main() -> None:
     ap.add_argument("--refine-stop", type=int, default=None, help="default: 0.5 * steps (3DGS paper: 15k of 30k)")
     ap.add_argument("--grow-grad2d", type=float, default=0.0002)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--mask", choices=["none", "moving", "vehicles"], default="none",
+                    help="exclude pixels of moving objects (or all vehicles) from the photometric loss")
+    ap.add_argument("--depth-lambda", type=float, default=0.0,
+                    help=">0: add lambda * L1(rendered expected depth, lidar depth) on train pixels with a lidar return")
     args = ap.parse_args()
 
     import gsplat
@@ -46,7 +51,17 @@ def main() -> None:
     params = init_params(init["xyz"], init["rgb"], args.sh_degree, dev)
     n_init = len(params["means"])
 
+    split = sc.lidar_split
+    if args.depth_lambda > 0:
+        if split is None or split["policy"] != "strict":
+            raise SystemExit("depth supervision needs a work dir prepared with --strict-lidar")
+        assert_no_lidar_leak(split["init_sweep_ts"] + split["depth_sweep_ts"], split["eval_sweep_ts"])
+    elif split is not None and split["policy"] == "strict":
+        assert_no_lidar_leak(split["init_sweep_ts"], split["eval_sweep_ts"])
+
     imgs = {i: torch.from_numpy(sc.image(i)) for i in sc.train}  # CPU uint8, train only
+    masks = ({i: torch.from_numpy(sc.mask(i, args.mask))[..., None] for i in sc.train} if args.mask != "none" else None)
+    depths = ({i: torch.from_numpy(sc.train_depth(i)) for i in sc.train} if args.depth_lambda > 0 else None)
     K = sc.K.to(dev)
     viewmats = {i: sc.viewmat(i).to(dev) for i in sc.train}
 
@@ -70,10 +85,21 @@ def main() -> None:
         i = int(order.pop())
         gt = imgs[i].to(dev, non_blocking=True).float() / 255.0
         sh = min(step // 1000, args.sh_degree)
-        img, _, info = render(params, viewmats[i], K, sc.W, sc.H, sh)
+        if depths is not None:
+            img, _, info, dep = render(params, viewmats[i], K, sc.W, sc.H, sh, with_depth=True)
+        else:
+            img, _, info = render(params, viewmats[i], K, sc.W, sc.H, sh)
         strategy.step_pre_backward(params, opts, state, step, info)
+        if masks is not None:
+            # masked pixels are replaced by the ground truth, so they contribute exactly zero loss/gradient
+            m = masks[i].to(dev, non_blocking=True)
+            img = torch.where(m, gt, img)
         l1 = (img - gt).abs().mean()
         loss = (1 - args.ssim_lambda) * l1 + args.ssim_lambda * (1 - ssim_torch(img, gt))
+        if depths is not None:
+            dl = depths[i].to(dev, non_blocking=True)
+            valid = dl > 0
+            loss = loss + args.depth_lambda * (dep[valid] - dl[valid]).abs().mean()
         loss.backward()
         opts["means"].param_groups[0]["lr"] = exp_lr(step, args.steps, lrs["means"], lrs["means"] * 0.01)
         for o in opts.values():
@@ -95,6 +121,8 @@ def main() -> None:
     stats = {
         "steps": args.steps, "sh_degree": args.sh_degree, "ssim_lambda": args.ssim_lambda,
         "refine_stop": refine_stop, "grow_grad2d": args.grow_grad2d, "seed": args.seed,
+        "mask": args.mask, "depth_lambda": args.depth_lambda,
+        "lidar_policy": split["policy"] if split else "legacy (no lidar_split.json)",
         "n_gaussians_init": n_init, "n_gaussians_final": len(params["means"]),
         "train_wall_s": round(wall, 1),
         "vram_peak_allocated_mb": round(torch.cuda.max_memory_allocated() / 2**20),

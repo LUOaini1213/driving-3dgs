@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from d3gs.metrics import psnr, ssim
+from d3gs.metrics import psnr, psnr_masked, ssim, ssim_masked
 
 
 def _img(seed=0, h=64, w=80):
@@ -39,3 +39,28 @@ def test_ssim_matches_scikit_image_reference():
 def test_shape_mismatch_raises():
     with pytest.raises(ValueError):
         psnr(np.zeros((4, 4, 3)), np.zeros((4, 5, 3)))
+
+
+def test_masked_metrics_equal_full_metrics_when_nothing_is_masked():
+    a, b = _img(0), _img(1)
+    keep = np.ones(a.shape[:2], bool)
+    assert psnr_masked(a, b, keep) == pytest.approx(psnr(a, b), abs=1e-12)
+    assert ssim_masked(a, b, keep) == pytest.approx(ssim(a, b), abs=1e-12)
+
+
+def test_masked_metrics_ignore_errors_inside_the_mask():
+    a = _img(0)
+    b = a.copy()
+    b[20:40, 30:50] = 1 - b[20:40, 30:50]          # corrupt a block (a 'moving object')
+    keep = np.ones(a.shape[:2], bool)
+    keep[20:40, 30:50] = False
+    assert psnr_masked(a, b, keep) == float("inf")
+    assert psnr(a, b) < 30                           # the corruption is visible to the full-image metric
+    # SSIM windows (radius 5) centred on kept pixels next to the block still see it: only far pixels are exact
+    far = keep.copy()
+    far[15:45, 25:55] = False
+    assert ssim_masked(a, b, far) == pytest.approx(1.0, abs=1e-9)
+    assert ssim_masked(a, b, keep) < 1.0
+    # PSNR is over kept pixels: a 0.1 error on kept pixels only -> 20 dB
+    c = a + 0.1 * keep[..., None]
+    assert psnr_masked(a, c, keep) == pytest.approx(20.0)
