@@ -11,14 +11,33 @@ import numpy as np
 
 
 def psnr(a: np.ndarray, b: np.ndarray, data_range: float = 1.0) -> float:
-    a = np.asarray(a, dtype=np.float64)
-    b = np.asarray(b, dtype=np.float64)
-    if a.shape != b.shape:
-        raise ValueError(f"shape mismatch {a.shape} vs {b.shape}")
+    a, b = _pair(a, b, data_range)
     mse = float(np.mean((a - b) ** 2))
     if mse == 0:
         return float("inf")
     return 10.0 * np.log10(data_range ** 2 / mse)
+
+
+def _pair(a, b, data_range, *, image=False, window=1):
+    a, b = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
+    if a.shape != b.shape:
+        raise ValueError(f"shape mismatch {a.shape} vs {b.shape}")
+    if not a.size or not np.isfinite(a).all() or not np.isfinite(b).all():
+        raise ValueError("images must be nonempty and finite")
+    if np.ndim(data_range) or isinstance(data_range, (bool, np.bool_)) or not np.isfinite(data_range) or data_range <= 0:
+        raise ValueError("data_range must be finite and positive")
+    if image and (a.ndim not in (2, 3) or min(a.shape[:2]) < window):
+        raise ValueError(f"images must be HxW or HxWxC with H,W >= {window}")
+    return a, b
+
+
+def _mask(keep, shape):
+    keep = np.asarray(keep)
+    if keep.shape != shape:
+        raise ValueError("mask shape mismatch")
+    if not np.isin(keep, [0, 1]).all():
+        raise ValueError("mask must contain only boolean or 0/1 values")
+    return keep.astype(bool)
 
 
 def _gaussian_kernel(size: int = 11, sigma: float = 1.5) -> np.ndarray:
@@ -57,32 +76,30 @@ def _ssim_maps(a: np.ndarray, b: np.ndarray, data_range: float) -> list[np.ndarr
 
 
 def ssim(a: np.ndarray, b: np.ndarray, data_range: float = 1.0) -> float:
-    a = np.asarray(a, dtype=np.float64)
-    b = np.asarray(b, dtype=np.float64)
-    if a.shape != b.shape:
-        raise ValueError(f"shape mismatch {a.shape} vs {b.shape}")
+    a, b = _pair(a, b, data_range, image=True, window=11)
     if a.ndim == 2:
         a, b = a[..., None], b[..., None]
     return float(np.mean([m.mean() for m in _ssim_maps(a, b, data_range)]))
 
 
 def psnr_masked(a: np.ndarray, b: np.ndarray, keep: np.ndarray, data_range: float = 1.0) -> float:
-    """PSNR over the pixels where ``keep`` (H, W) is True (all channels of those pixels)."""
-    a = np.asarray(a, dtype=np.float64)
-    b = np.asarray(b, dtype=np.float64)
-    keep = np.asarray(keep, dtype=bool)
-    if a.shape != b.shape or keep.shape != a.shape[:2]:
-        raise ValueError("shape mismatch")
+    """PSNR over kept pixels; NaN means no kept pixels (not an evaluated score)."""
+    a, b = _pair(a, b, data_range, image=True)
+    keep = _mask(keep, a.shape[:2])
     if not keep.any():
         return float("nan")
     return psnr(a[keep], b[keep], data_range)
 
 
 def ssim_masked(a: np.ndarray, b: np.ndarray, keep: np.ndarray, data_range: float = 1.0) -> float:
-    """Mean of the SSIM map over window centres where ``keep`` is True (same recipe as ``ssim``)."""
-    a = np.asarray(a, dtype=np.float64)
-    b = np.asarray(b, dtype=np.float64)
-    keep = np.asarray(keep, dtype=bool)
+    """Mean SSIM over kept window centres; NaN if no valid centres are kept.
+
+    A kept window can include excluded neighbouring pixels, as in the historical metric.
+    """
+    a, b = _pair(a, b, data_range, image=True, window=11)
+    keep = _mask(keep, a.shape[:2])
+    if a.ndim == 2:
+        a, b = a[..., None], b[..., None]
     r = (len(_gaussian_kernel()) - 1) // 2
     kc = keep[r:keep.shape[0] - r, r:keep.shape[1] - r]   # 'valid' map is offset by the window radius
     if not kc.any():

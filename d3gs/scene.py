@@ -23,7 +23,8 @@ def sh0_to_rgb(sh0: torch.Tensor) -> torch.Tensor:
 class Scene:
     def __init__(self, work_dir: str | Path):
         self.dir = Path(work_dir)
-        self.meta = json.loads((self.dir / "cameras.json").read_text())
+        self.meta = json.loads((self.dir / "cameras.json").read_text(encoding="utf-8"))
+        self._validate_metadata()
         self.W, self.H = self.meta["width"], self.meta["height"]
         self.K = torch.tensor(self.meta["K"], dtype=torch.float32)
         self.c2w = torch.tensor(np.array([f["c2w"] for f in self.meta["frames"]]), dtype=torch.float32)
@@ -31,12 +32,75 @@ class Scene:
         self.train_stride = int(self.meta.get("train_stride", 1))
         self.test = list(self.meta["test"])
         centers = self.c2w[self.train, :3, 3]
-        self.scene_scale = float((centers - centers.mean(0)).norm(dim=1).max()) * 1.1
+        self.scene_scale = max(1e-3, float((centers - centers.mean(0)).norm(dim=1).max()) * 1.1)
+
+    def _validate_metadata(self):
+        m = self.meta
+        if not isinstance(m, dict):
+            raise ValueError("scene metadata must be an object")
+        for key in ("width", "height", "train_stride"):
+            value = m.get(key, 1 if key == "train_stride" else None)
+            if type(value) is not int or value <= 0:
+                raise ValueError(f"{key} must be a positive integer")
+        try:
+            K = np.asarray(m["K"], dtype=float)
+            if K.shape != (3, 3) or not np.isfinite(K).all() or K[0, 0] <= 0 or K[1, 1] <= 0 or not np.allclose(K[2], [0, 0, 1]):
+                raise ValueError("invalid camera K")
+            if abs(np.linalg.det(K)) < 1e-12:
+                raise ValueError("singular camera K")
+            frames = m["frames"]
+            if not isinstance(frames, list) or not frames:
+                raise ValueError("frames must be nonempty")
+            timestamps = []
+            for i, frame in enumerate(frames):
+                if frame.get("idx", i) != i or type(frame.get("idx", i)) is not int:
+                    raise ValueError("frame idx must match its position")
+                timestamp = frame["timestamp_ns"]
+                if type(timestamp) is not int:
+                    raise ValueError("frame timestamps must be integers")
+                timestamps.append(timestamp)
+                pose = np.asarray(frame["c2w"], dtype=float)
+                if pose.shape != (4, 4) or not np.isfinite(pose).all() or not np.allclose(pose[3], [0, 0, 0, 1]):
+                    raise ValueError("invalid camera pose")
+                R = pose[:3, :3]
+                if not np.allclose(R.T @ R, np.eye(3), atol=1e-5) or not np.isclose(np.linalg.det(R), 1, atol=1e-5):
+                    raise ValueError("camera pose rotation must be rigid")
+                name = frame["image"]
+                if not isinstance(name, str) or not name or Path(name).is_absolute() or ".." in Path(name).parts:
+                    raise ValueError("image must be a relative path inside the scene")
+                if not (self.dir / name).resolve().is_relative_to(self.dir.resolve()):
+                    raise ValueError("image escapes prepared scene")
+            if any(a >= b for a, b in zip(timestamps, timestamps[1:])):
+                raise ValueError("frame timestamps must be strictly increasing")
+            for key in ("train", "test"):
+                ids = m[key]
+                if not isinstance(ids, list) or any(type(i) is not int or not 0 <= i < len(frames) for i in ids) or len(ids) != len(set(ids)):
+                    raise ValueError(f"invalid {key} frame indices")
+            if not m["train"] or set(m["train"]) & set(m["test"]):
+                raise ValueError("train must be nonempty and disjoint from held-out frames")
+            if "city_origin" in m:
+                origin = np.asarray(m["city_origin"], dtype=float)
+                if origin.shape != (3,) or not np.isfinite(origin).all():
+                    raise ValueError("city_origin must be a finite 3-vector")
+        except (KeyError, TypeError) as exc:
+            raise ValueError("incomplete scene metadata") from exc
 
     def image(self, i: int) -> np.ndarray:
         """uint8 RGB (H, W, 3)."""
         import cv2
-        return cv2.imread(str(self.dir / self.meta["frames"][i]["image"]), cv2.IMREAD_COLOR)[:, :, ::-1].copy()
+        from .image_io import read_image
+        image = read_image(self.dir / self.meta["frames"][i]["image"], cv2.IMREAD_COLOR)
+        if image.shape != (self.H, self.W, 3):
+            raise ValueError(f"image {i} shape does not match scene resolution")
+        return image[:, :, ::-1].copy()
+
+    def initial_points(self):
+        with np.load(self.dir / "init_points.npz", allow_pickle=False) as data:
+            xyz, rgb = data["xyz"], data["rgb"]
+        if (xyz.ndim != 2 or xyz.shape[1:] != (3,) or len(xyz) < 4 or rgb.shape != xyz.shape
+                or not np.isfinite(xyz).all() or not np.isfinite(rgb).all() or (rgb < 0).any() or (rgb > 1).any()):
+            raise ValueError("initial points need >=4 finite xyz/RGB rows, with RGB in [0,1]")
+        return xyz, rgb
 
     def viewmat(self, i: int) -> torch.Tensor:
         return torch.linalg.inv(self.c2w[i])
@@ -47,24 +111,55 @@ class Scene:
         p = self.dir / "masks" / kind / f"{i:04d}.png"
         if not p.exists():
             raise FileNotFoundError(f"{p} (run prepare.py with --masks)")
-        return cv2.imread(str(p), cv2.IMREAD_GRAYSCALE) > 0
+        from .image_io import read_image
+        mask = read_image(p, cv2.IMREAD_GRAYSCALE)
+        if mask.shape != (self.H, self.W):
+            raise ValueError(f"mask {i} shape does not match scene resolution")
+        return mask > 0
 
     @property
     def lidar_split(self) -> dict | None:
         p = self.dir / "lidar_split.json"
-        return json.loads(p.read_text()) if p.exists() else None
+        if not p.exists():
+            return None
+        split = json.loads(p.read_text(encoding="utf-8"))
+        if not isinstance(split, dict) or split.get("policy") not in ("strict", "legacy"):
+            raise ValueError("invalid lidar split policy")
+        for key in ("sweep_ts", "eval_sweep_ts", "init_sweep_ts", "depth_sweep_ts"):
+            values = split.get(key)
+            if not isinstance(values, list) or any(type(t) is not int for t in values) or len(values) != len(set(values)):
+                raise ValueError(f"invalid lidar {key}")
+        sweeps = split["sweep_ts"]
+        if not sweeps or sweeps != sorted(sweeps):
+            raise ValueError("lidar sweep timestamps must be nonempty and sorted")
+        for key in ("eval_sweep_ts", "init_sweep_ts", "depth_sweep_ts"):
+            if not set(split[key]) <= set(sweeps):
+                raise ValueError(f"unknown lidar timestamps in {key}")
+        from .lidar import split_sweeps, assert_no_lidar_leak
+        _, expected = split_sweeps(np.asarray(sweeps), np.asarray([f["timestamp_ns"] for f in self.meta["frames"]]), self.test)
+        if set(split["eval_sweep_ts"]) != {sweeps[k] for k in expected}:
+            raise ValueError("lidar evaluation split does not match held-out frames")
+        if split["policy"] == "strict":
+            assert_no_lidar_leak(split["init_sweep_ts"] + split["depth_sweep_ts"], split["eval_sweep_ts"])
+        return split
+
+    def _depth(self, path):
+        depth = np.load(path, allow_pickle=False)
+        if depth.shape != (self.H, self.W) or not np.isfinite(depth).all() or (depth < 0).any():
+            raise ValueError(f"invalid depth data: {path}")
+        return depth
 
     def train_depth(self, i: int) -> np.ndarray:
         """Sparse lidar z-depth (H, W) for a TRAIN frame (0 = no return). Refuses held-out frames."""
         if i not in self.train:
             raise PermissionError(f"frame {i} is not a train frame; its lidar is reserved for evaluation")
-        return np.load(self.dir / "depth" / f"{i:04d}.npy")
+        return self._depth(self.dir / "depth" / f"{i:04d}.npy")
 
     def eval_depth(self, i: int) -> np.ndarray:
         """Sparse lidar depth of a HELD-OUT frame from its reserved evaluation sweep (evaluation only)."""
         if i not in self.test:
             raise PermissionError(f"frame {i} is not held out")
-        return np.load(self.dir / "eval_depth" / f"{i:04d}.npy")
+        return self._depth(self.dir / "eval_depth" / f"{i:04d}.npy")
 
 
 def init_params(xyz: np.ndarray, rgb: np.ndarray, sh_degree: int, device: str) -> torch.nn.ParameterDict:
