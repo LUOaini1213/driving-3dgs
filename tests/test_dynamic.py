@@ -62,7 +62,7 @@ def test_box_partly_behind_camera_to_the_right():
 
 
 def test_track_speed_constant_velocity_and_static():
-    ts = (np.arange(30) * 100_000_000).astype(np.int64)      # 10 Hz for 3 s
+    ts = np.arange(30, dtype=np.int64) * 100_000_000        # 10 Hz for 3 s, no int32 overflow
     moving = np.stack([5.0 * ts / 1e9, np.zeros(30), np.zeros(30)], 1)
     static = np.zeros((30, 3)) + np.random.default_rng(0).normal(scale=0.02, size=(30, 3))
     np.testing.assert_allclose(track_speed(ts, moving), 5.0, atol=1e-9)

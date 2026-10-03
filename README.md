@@ -6,17 +6,17 @@
 ## 这是什么
 
 用 **Argoverse 2（AV2）传感器数据集**里一段约 8 秒（160 帧，20 Hz）的前视相机视频 + 数据集自带的标定与自车位姿，
-训练 **3D Gaussian Splatting（3DGS）** 场景表示，在**留出帧**（训练时从未见过的时刻）上渲染并与真值比对。
+训练 **3D Gaussian Splatting（3DGS）** 场景表示，在**留出帧**（未参与图像训练的帧）上渲染并与真值比对。
 
 整条链路：
 
 1. **位姿**：`city_SE3_cam(t) = city_SE3_ego(t) @ ego_SE3_cam`，按图像时间戳查自车位姿（本段 160 帧的时间戳都能在位姿表里精确命中，插值代码有单测但本次运行没有用到），再平移到训练相机中心附近以保证 float32 精度。
 2. **图像**：按标定的 k1/k2/k3 去畸变 → 裁掉底部自车引擎盖 → 缩到 388×456（GTX 1650 4 GB 显存）。
 3. **划分**：每 8 帧留出 1 帧做评测（确定性、无随机），另有只用每 4 帧中 1 帧训练的“稀疏视角”对照（`sparse4_7k`）。
-4. **初始化**：激光雷达扫描转到世界系，只保留被**训练**相机看到的点并用训练图像上色，体素下采样；天空/远景另撒一层远距离点。留出帧的图像在初始化和训练中都不读取。
+4. **初始化**：激光雷达扫描转到世界系，只保留被**训练**相机看到的点并用训练图像上色，体素下采样；天空/远景另撒一层远距离点。留出帧图像不参与初始化上色或训练损失；新版本仅为内容核对读取其字节并计算哈希。
 5. **训练**：[gsplat](https://github.com/nerfstudio-project/gsplat) 的 CUDA 光栅化器 + `DefaultStrategy` 自适应加密/剪枝，损失 0.8·L1 + 0.2·(1−SSIM)；
    可选：把移动物体像素排除出损失（`--mask moving`），加激光深度 L1（`--depth-lambda`）。
-6. **评测**：留出帧 PSNR / SSIM（NumPy 实现，单测里与 scikit-image 对齐到 1e-6）/ LPIPS(Alex)，全图和“只算静态像素”各一套；
+6. **评测**：留出帧 PSNR / SSIM（NumPy 实现，单测里与 scikit-image 对齐到 1e-6）/ LPIPS(Alex)，另报静态像素 PSNR 和静态窗口中心 SSIM；
    与“复制最近训练帧”“仅初始化”两个基线对比；另用**留出帧专用的激光扫描**评测渲染深度。
 7. **导出**：标准 3DGS PLY；`docs/preview.html`（高斯中心点云 + 相机轨迹）；`docs/splat/viewer.html`（真正的 splat 渲染，网页可交互）。
 
@@ -25,15 +25,16 @@
 - 来源是 AV2 的**人工标注长方体**（`annotations.feather`，10 Hz），不是检测器：每条轨迹转到城市坐标系，用 ±0.5 s 的中心位移估速度，
   速度 > 1 m/s 记为“移动”；按图像时间戳在相邻两次标注间插值（中心线性、旋转 slerp）。
 - 长方体每边外扩 0.25 m，12 条棱先对近平面裁剪再投影（相机后方的角点直接投影会镜像到画面另一侧），取凸包、裁到画框、按像素中心是否在多边形内填充。
-- 训练时把掩膜内像素替换成真值再算损失，这些像素对 L1/SSIM 的贡献和梯度恰好为 0。评测时同一套掩膜（留出帧的）定义“静态像素”，只用于算指标。
+- 训练时把掩膜内预测替换成真值再算损失，因此掩膜内预测的梯度为 0；L1 中这些位置的误差也为 0。SSIM 使用邻域窗口，掩膜内真值仍参与相邻窗口统计，不能解释成这些像素对 SSIM 完全没有影响。
+- 评测时同一套掩膜（留出帧的）筛选 PSNR 的像素，以及 SSIM 的窗口中心；SSIM 窗口仍可能覆盖移动物体。这是历史实验使用的定义，保持不变。
 - 也生成了“全部车辆”掩膜（含停着的车），本轮没有拿它训练。
 
 ### 激光深度与“评测扫描”隔离（`d3gs/lidar.py`）
 
 - 每个留出帧时间上最近的那一帧激光扫描（本段都在 ±11 ms 内）被划为**评测扫描**，只给留出帧的深度评测用；其余扫描才能进初始化或深度监督。
   `prepare.py`、`train.py`、`evaluate.py` 三处都调用 `assert_no_lidar_leak` 检查；`Scene.train_depth()` 对留出帧直接拒绝。
-- **第一轮的原始初始化（`full_*`、`sparse4_*`）读了全部 40 帧扫描，其中 20 帧恰好是评测扫描**——这对图像指标无影响（留出帧图像从未读取），
-  但对深度评测是泄漏，所以第二轮的对比实验改用 `strict` 初始化（去掉评测扫描），原始运行的深度数字只作泄漏对照、单独标注。
+- **第一轮的原始初始化（`full_*`、`sparse4_*`）读了全部 40 帧扫描，其中 20 帧恰好是评测扫描**。留出帧图像没有用于训练，但相应时刻的激光信息进入了初始化，不能宣称所有传感器输入都与评测隔离，也没有实验能证明其对图像指标毫无影响。
+  这对深度评测构成泄漏，所以第二轮的对比实验改用 `strict` 初始化（去掉评测扫描），原始运行的深度数字只作泄漏对照、单独标注。
 - 深度监督：每个训练帧取时间最近的非评测扫描投影成稀疏深度图（移动物体像素剔除），对 gsplat 渲染的期望深度（`RGB+ED`）做 L1，λ = 0.05，未调参。
 - 评测：留出帧的评测扫描投影到该帧相机（z-buffer 取最近点，0.5–80 m），与渲染深度比较：中位绝对误差、误差 ≤ 0.5 m 的占比、AbsRel；
   20 帧所有激光像素合并统计。AV2 扫描已按扫描时刻做过运动补偿（在本段上验证过：按每点 `offset_ns` 再补偿一次，相邻扫描反而对得更差）。
@@ -90,7 +91,7 @@
 读法：
 
 - `full_*`：140 帧训练、20 帧留出；留出帧与最近训练帧相隔 1 帧（50 ms，自车约走 0.2 m），是“沿轨迹插值”的容易设置。
-- PSNR/SSIM 上 3DGS 在留出帧上高于复制基线；但 **LPIPS 上复制基线更好**——复制来的是一张真实照片，纹理锐利、只是错位，
+- PSNR/SSIM 上 3DGS 在留出帧上高于复制基线；在 **`full_7k` 的 LPIPS 上复制基线更好**（`full_30k` 则由 3DGS 更好）——复制来的是一张真实照片，纹理锐利、只是错位，
   而 3DGS 渲染在树冠、远处和路面纹理上发糊、有拉丝（见下图）。两类指标衡量的东西不同，表里如实列出，不挑有利的那个。
 - `sparse4_7k` 只用每 4 帧中 1 帧训练（20 帧），留出帧距最近训练帧 200 ms：3DGS 三项指标都优于复制基线，但训练视角与留出帧差距明显拉大（过拟合）。
 - gsplat 反向传播使用原子加，同一种子重跑在小数点后几位会有差异；下文用一个换种子的重复估计噪声量级。
@@ -180,10 +181,11 @@
 
 <!-- BEGIN:web -->
 - 资产：`docs/splat/full_7k.splat`，309,957 / 557,802 个高斯（不透明度 ≥ 0.05，按 不透明度×投影面积 取前 600,000 个），9.9 MB（每个 32 字节）
-- 同一批留出帧上用 gsplat 渲染的 PSNR：完整模型 27.76 dB → 只保留 0 阶球谐（.splat 格式只存视角无关颜色）27.00 dB → 网页实际加载的子集 26.56 dB
+- 同一批留出帧上用 gsplat 渲染的 PSNR：完整模型 27.76 dB → 只保留 0 阶球谐（.splat 格式只存视角无关颜色）27.00 dB → 历史量化前筛选子集（未计入 RGBA/四元数量化） 26.56 dB；这些均不是浏览器渲染器的 PSNR
 - 渲染器：@mkkellogg/gaussian-splats-3d@0.4.7 + three@0.160.0 (jsDelivr)；初始视角为留出帧 84 的相机
-- 选资产时比较过的候选（同一导出代码；网页子集在留出帧上的 PSNR）：`full_30k` 保留 400,000 个 / 12.8 MB → 22.16 dB；`full_30k` 保留 600,000 个 / 19.2 MB → 25.12 dB；`full_7k` 保留 557,802 个 / 17.8 MB → 27.00 dB；`full_7k` 保留 309,957 个 / 9.9 MB → 26.56 dB
-- 无头 Chromium（--use-gl=swiftshader --enable-webgl --ignore-gpu-blocklist）检查：通过；加载并渲染前 10 帧用时 40.2 s，控制台错误 0 条，失败请求 0 个；画布非背景像素 88.2%；WebGL 后端 `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)`；截图 `docs/img/viewer_headless.jpg`
+- 历史候选比较（量化前筛选子集，用 gsplat 在留出帧上评测）：`full_30k` 保留 400,000 个 / 12.8 MB → 22.16 dB；`full_30k` 保留 600,000 个 / 19.2 MB → 25.12 dB；`full_7k` 保留 557,802 个 / 17.8 MB → 27.00 dB；`full_7k` 保留 309,957 个 / 9.9 MB → 26.56 dB
+- 历史无头 Chromium（2026-09-27；--use-gl=swiftshader --enable-webgl --ignore-gpu-blocklist）检查：通过；加载并渲染前 10 帧用时 40.2 s，控制台错误 0 条，失败请求 0 个；画布非背景像素 88.2%；WebGL 后端 `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)`；截图 `docs/img/viewer_headless.jpg`。旧记录未绑定资产/页面 SHA256，不证明当前页面通过检查。
+- 当前 `docs/splat/asset_manifest.json` 仅绑定资产原始字节及页面 UTF-8/LF 内容；内容校验不等于新的训练、评测或浏览器验收。
 <!-- END:web -->
 
 ![headless viewer screenshot](docs/img/viewer_headless.jpg)
@@ -242,16 +244,26 @@ D:/driving-3dgs/env/python.exe -m pip install -r requirements.txt
 bash scripts/run_all.sh     # 下载 → prepare(full / sparse4 / strict) → 8 个训练+评测 → 导出网页 → 偏离轨迹 → 检查
 ```
 
+重新实验请使用独立 checkout，并将 `DATA_ROOT` 设为新的实验目录（`PY` 可继续指向已有 Python 环境）。
+脚本会生成本次实验的结果、网页和 README 表格；`prepare` 和 `train` 不覆盖已有数据或模型。
+例如 `DATA_ROOT=D:/driving-3dgs/reproduction-new bash scripts/run_all.sh`。本轮代码审查没有重跑训练或改写上述历史结果。
+
 单独看网页查看器：`.splat` 要通过 HTTP 加载（`file://` 下浏览器会拦截），在仓库根目录执行
 `python -m http.server -d docs 8000`，打开 <http://localhost:8000/splat/viewer.html>。无头检查：
 `node scripts/check_viewer.cjs <导出 chromium 的 playwright 模块路径>`（默认 `require('playwright')`）。
+
+新训练会记录场景、图像、初始化、掩膜/深度、检查点及训练参数的内容哈希；评测和导出会核对这份记录，并检查辅助评测帧是否相同。目录可以搬迁，但内容不一致会拒绝继续。该记录用于核对本地实验的一致性，不是第三方训练认证。
+
+旧模型没有这份记录。若确需重新评测旧模型，可给 `evaluate.py`、`offpath.py` 或 `export.py` 加 `--allow-unverified-run`；结果将标为 `unverified_legacy`，激光隔离状态保持未知，不能借用另一个 strict 目录来声称原训练无泄漏。仓库中的旧结果仍保留原始数字与历史口径，没有补写成新验证结果。
+
+当前网页通过 `docs/splat/asset_manifest.json` 核对资产和页面内容。新的无头检查默认写入独立的 `results/viewer-checks/` 子目录，拒绝覆盖旧证明；完整复现脚本用 `--record-in results/web_export.json` 关联本次成功的报告。当前报告会绑定页面、实际响应、资产及截图；历史的 40.2 秒检查不会被当作当前页面的性能数据。
 
 其他检查：
 
 ```bash
 $PY scripts/check_readme.py --check      # README 表格与 JSON 不一致、图片 ≥ 300 KB、splat 资产 ≥ 20 MB 或与记录不符 → 失败
 $PY -m pytest -q                         # 位姿/划分/指标/掩膜几何/深度投影/泄漏守卫/splat 编码
-$PY scripts/mutation_check.py            # 变异检查，结果写入 MUTATION.md
+$PY scripts/mutation_check.py            # 在临时副本中变异；只把测试调用阶段失败计为捕获，记录写入 MUTATION.md
 ```
 
 LPIPS 的 AlexNet 权重会下载到 `D:/driving-3dgs/torch_home`（`evaluate.py --torch-home`）。
@@ -275,7 +287,8 @@ A small, reproducible driving-scene reconstruction: one 8-second clip of the Arg
 3D Gaussian Splatting trained with gsplat on a 4 GB GTX 1650, evaluated on held-out frames against a
 copy-nearest-frame baseline and an initialisation-only baseline. Second round: a 30k-iteration run; moving-object
 masks rasterised from the AV2 annotation cuboids (near-plane clipped) and used to exclude those pixels from the
-loss, with full-image and static-only metrics; lidar depth supervision, with each held-out frame's nearest lidar
+loss, with full-image metrics, static-pixel PSNR and static-window-centre SSIM (neighbouring pixels still
+enter each SSIM window); lidar depth supervision, with each held-out frame's nearest lidar
 sweep reserved for evaluation only and a leakage guard in prepare/train/evaluate (the original initialisation had
 read those sweeps, so its depth numbers are reported only as a contrast); a pruned `.splat` web viewer verified
 in headless Chromium; and laterally shifted off-path views measured against re-projected lidar. Findings on this

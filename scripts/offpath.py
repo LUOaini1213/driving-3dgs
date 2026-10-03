@@ -27,6 +27,9 @@ from d3gs.av2io import load_poses, load_sweep_xyz  # noqa: E402
 from d3gs.geometry import se3_inverse, transform_points  # noqa: E402
 from d3gs.lidar import depth_errors, depth_map, nearest_sweep  # noqa: E402
 from d3gs.scene import Scene, render  # noqa: E402
+from d3gs.provenance import verify_run, verify_lidar_sources, capture_eval_inputs  # noqa: E402
+from d3gs.lidar import assert_no_lidar_leak, LidarLeakError  # noqa: E402
+from d3gs.report_keys import offset_key  # noqa: E402
 
 
 def shifted_c2w(c2w: np.ndarray, dx: float) -> np.ndarray:
@@ -45,10 +48,28 @@ def main() -> None:
     ap.add_argument("--fig", default=None)
     ap.add_argument("--fig-frames", type=int, nargs="+", default=[36, 116])
     ap.add_argument("--fig-scale", type=float, default=0.5)
+    ap.add_argument("--allow-unverified-run", action="store_true", help="allow legacy inputs with explicitly unverified identity")
     args = ap.parse_args()
 
     sc = Scene(args.work)
+    if not sc.test or len(set(args.offsets)) != len(args.offsets):
+        raise ValueError("off-path evaluation needs held-out frames and unique offsets")
+    keys = [offset_key(dx) for dx in args.offsets]
+    if args.fig and (not np.isfinite(args.fig_scale) or args.fig_scale <= 0 or min(sc.W, sc.H) * args.fig_scale < 1
+                     or any(i not in sc.test for i in args.fig_frames)):
+        raise ValueError("invalid off-path figure scale or frame cohort")
+    runs = list(map(Path, args.runs))
+    if len({p.name for p in runs}) != len(runs):
+        raise ValueError("run basenames must be unique to avoid overwriting report entries")
+    verified = []
+    for run in runs:
+        stats = json.loads((run / "train_stats.json").read_text())
+        verified.append((stats, verify_run(run, sc, stats, allow_legacy=args.allow_unverified_run)))
     split = sc.lidar_split
+    if split is None:
+        raise ValueError("off-path evaluation requires lidar split metadata")
+    raw_identity = verify_lidar_sources(sc, allow_legacy=args.allow_unverified_run)
+    eval_identity = capture_eval_inputs(sc)
     log_dir = Path(sc.meta["log_dir"])
     poses = load_poses(log_dir)
     origin = np.array(sc.meta["city_origin"])
@@ -65,19 +86,31 @@ def main() -> None:
     pts = {i: eval_points(i) for i in sc.test}
     K = sc.K.cuda()
     Knp = sc.K.numpy().astype(np.float64)
-    out = {"offsets_m": args.offsets, "frames": sc.test, "runs": {}}
+    out = {"offsets_m": args.offsets, "frames": sc.test, "runs": {},
+           "raw_lidar_identity": raw_identity, "evaluation_inputs": eval_identity}
     fig_tiles: dict[tuple, np.ndarray] = {}
-    for run_dir in map(Path, args.runs):
-        stats = json.loads((run_dir / "train_stats.json").read_text())
-        params = {k: v.cuda() for k, v in torch.load(run_dir / "ckpt.pt").items()}
+    for run_dir, (stats, identity) in zip(runs, verified):
+        leak_free = None
+        if identity.get("lidar") is not None and raw_identity["status"] == "verified":
+            own = identity["lidar"]
+            try:
+                assert_no_lidar_leak(own["init_sweep_ts"] + own["depth_sweep_ts"], split["eval_sweep_ts"])
+                leak_free = True
+            except LidarLeakError:
+                leak_free = False
+        params = {k: v.cuda() for k, v in torch.load(run_dir / "ckpt.pt", map_location="cpu", weights_only=True).items()}
         per = {}
-        for dx in args.offsets:
+        for dx, key in zip(args.offsets, keys):
             holes, P, G = [], [], []
             for i in sc.test:
                 c2w = shifted_c2w(sc.c2w[i].numpy(), dx)
                 vm = torch.from_numpy(se3_inverse(c2w)).float().cuda()
                 with torch.no_grad():
                     img, alpha, _, dep = render(params, vm, K, sc.W, sc.H, stats["sh_degree"], with_depth=True)
+                if tuple(alpha.shape) != (sc.H, sc.W, 1) or not torch.isfinite(alpha).all() or (alpha < 0).any() or (alpha > 1).any():
+                    raise ValueError("rendered coverage alpha must be finite, HxWx1, and in [0,1]")
+                if tuple(dep.shape) != (sc.H, sc.W):
+                    raise ValueError("rendered depth shape does not match evaluation camera")
                 a = alpha[..., 0].cpu().numpy()
                 holes.append(float((a < 0.5).mean()))
                 gd = depth_map(Knp, se3_inverse(c2w), pts[i], sc.W, sc.H)
@@ -87,14 +120,22 @@ def main() -> None:
                 if args.fig and i in args.fig_frames:
                     fig_tiles[(run_dir.name, i, dx)] = (img.cpu().numpy() * 255).round().astype(np.uint8)
             e = depth_errors(np.concatenate(P), np.concatenate(G))
-            per[f"{dx:+.0f}"] = {"hole_frac_mean": round(float(np.mean(holes)), 4),
-                                 "depth_median_abs_m": round(e["median_abs_m"], 4),
-                                 "depth_within_0_5m": round(e["within_tol"], 4), "depth_n": e["n"]}
-            print(run_dir.name, dx, per[f"{dx:+.0f}"])
+            per[key] = {"offset_m": dx, "hole_frac_mean": round(float(np.mean(holes)), 4),
+                        "depth_median_abs_m": round(e["median_abs_m"], 4) if e["median_abs_m"] is not None else None,
+                        "depth_within_0_5m": round(e["within_tol"], 4) if e["within_tol"] is not None else None, "depth_n": e["n"]}
+            print(run_dir.name, dx, per[key])
         out["runs"][run_dir.name] = {"mask": stats.get("mask", "none"), "depth_lambda": stats.get("depth_lambda", 0.0),
-                                     "steps": stats["steps"], "per_offset": per}
+                                     "steps": stats["steps"], "per_offset": per,
+                                     "run_identity": identity, "leak_free": leak_free}
         del params
         torch.cuda.empty_cache()
+    current_scene = Scene(sc.dir)
+    for run, (_, identity) in zip(runs, verified):
+        if verify_run(run, current_scene, allow_legacy=args.allow_unverified_run) != identity:
+            raise ValueError("run inputs changed during off-path evaluation")
+    if verify_lidar_sources(current_scene, allow_legacy=args.allow_unverified_run) != raw_identity or capture_eval_inputs(current_scene) != eval_identity:
+        raise ValueError("off-path evaluation inputs changed during execution")
+    Path(args.results).parent.mkdir(parents=True, exist_ok=True)
     Path(args.results).write_text(json.dumps(out, indent=1), encoding="utf-8")
 
     if args.fig:
@@ -107,7 +148,7 @@ def main() -> None:
                 for dx in args.offsets:
                     t = cv2.resize(fig_tiles[(run_dir.name, i, dx)], (w, h), interpolation=cv2.INTER_AREA)[:, :, ::-1].copy()
                     cv2.rectangle(t, (0, 0), (w, 16), (0, 0, 0), -1)
-                    lab = f"{run_dir.name} f{i} {dx:+.0f} m" if dx == args.offsets[0] else f"{dx:+.0f} m"
+                    lab = f"{run_dir.name} f{i} {offset_key(dx)} m" if dx == args.offsets[0] else f"{offset_key(dx)} m"
                     cv2.putText(t, lab, (3, 12), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (255, 255, 255), 1, cv2.LINE_AA)
                     tiles.append(t)
                 rows.append(np.hstack(tiles))
