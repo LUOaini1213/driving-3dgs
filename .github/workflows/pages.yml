@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "site/**"
+      - "tests/test_scene_promise.mjs"
       - "scripts/build_viewer.py"
       - "docs/splat/full_7k.splat"
       - "docs/img/viewer_headless.jpg"
@@ -32,6 +33,8 @@ jobs:
         run: |
           node --check site/viewer.js
           node --check site/viewer-frame.js
+      - name: Pinned renderer rejection regression
+        run: node --test tests/test_scene_promise.mjs
       - name: Isolated artifact and original asset integrity
         run: |
           python scripts/build_viewer.py --require-clean

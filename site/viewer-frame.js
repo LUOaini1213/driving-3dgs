@@ -1,3 +1,5 @@
+import { scenePromise } from "./scene-promise.js";
+
 const channel = "driving-3dgs-viewer-v1";
 const origin = location.origin;
 const position = [2.059999942779541, 2.9579999446868896, -0.06700000166893005];
@@ -47,14 +49,14 @@ async function start() {
     viewer.renderer.domElement.addEventListener("webglcontextlost", (event) => {
       event.preventDefault(); report("error", { code: "context" });
     });
-    await viewer.addSplatScene("./assets/full_7k.splat", {
+    await scenePromise(viewer.addSplatScene("./assets/full_7k.splat", {
       format: library.SceneFormat.Splat, splatAlphaRemovalThreshold: 5,
       showLoadingUI: false, progressiveLoad: false,
       onProgress: (percent, label, loaderStatus) => {
         // The pinned renderer uses 0=Downloading, 1=Processing, 2=Done.
         report(loaderStatus === 0 ? "downloading" : "preparing", { percent });
       },
-    });
+    }));
     document.querySelector(".frame-fallback").remove();
     viewer.start();
     // Keep the same first-render readiness boundary as the archived viewer check.

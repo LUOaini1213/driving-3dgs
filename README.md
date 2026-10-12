@@ -250,6 +250,24 @@ bash scripts/run_all.sh     # 下载 → prepare(full / sparse4 / strict) → 8 
 `python -m http.server -d docs 8000`，打开 <http://localhost:8000/splat/viewer.html>。无头检查：
 `node scripts/check_viewer.cjs <导出 chromium 的 playwright 模块路径>`（默认 `require('playwright')`）。
 
+另有适合直接展示的隔离查看器，默认先显示记录的预览，点击才下载 9.9 MB 的 `full_7k` 场景：
+
+```bash
+npm ci --prefix site --ignore-scripts --no-audit --no-fund
+node --test tests/test_scene_promise.mjs
+python scripts/build_viewer.py --require-clean
+python scripts/build_viewer.py --check --require-clean
+python -m http.server 8000 --directory build/pages
+# 打开 http://localhost:8000/
+```
+
+可拖动、缩放、重置到留出帧 84，并返回预览释放整个渲染文档。查看器展示已导出的 309,957 个
+Gaussians，不代表较大的 30k 模型；原始 `.splat` 和预览 SHA 不变，不新增浏览器精度或手机帧率结论。
+新入口使用同源、锁定的 renderer 0.4.7 和 three 0.160.0，下载错误直接回退到预览；它把该版本的
+`AbortablePromise` 显式接入原生 Promise 的拒绝分支，避免文件 404 后停留在加载状态。
+构建器只允许清单内的网页、许可和一个场景进入 `build/pages`，并记录源码/资产指纹；本地未提交
+修改会明确标记。Pages 工作流在 PR 中只构建检查，发布需从 master 手动触发。
+
 其他检查：
 
 ```bash

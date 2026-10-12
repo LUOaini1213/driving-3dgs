@@ -30,7 +30,7 @@ VENDOR = {
 TEXT = {
     name: "site/" + name for name in (
         "index.html", "viewer.css", "viewer.js", "viewer-frame.html", "viewer-frame.css",
-        "viewer-frame.js", "favicon.svg", "NOTICES.txt")
+        "viewer-frame.js", "scene-promise.js", "favicon.svg", "NOTICES.txt")
 }
 TEXT.update({
     "vendor/LICENSE-gaussian.txt": "site/node_modules/@mkkellogg/gaussian-splats-3d/LICENSE",
