@@ -64,7 +64,8 @@ async function start() {
     ready = true;
     if (document.hidden) viewer.stop();
     report("ready");
-  } catch {
+  } catch (error) {
+    console.error("Driving 3DGS viewer failed to initialize.", error);
     report("error", { code: "load" });
   }
 }
