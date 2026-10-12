@@ -18,3 +18,5 @@ __pycache__/
 *.pyc
 /site/node_modules/
 /build/pages/
+/mutation-artifacts/
+/results/viewer-checks/

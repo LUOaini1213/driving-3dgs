@@ -7,7 +7,7 @@ Steps
   4. hold out every Nth frame (deterministic)
   5. lidar init: sweeps -> world, keep points seen by >=1 TRAIN camera, colour them
      from the time-nearest train image; plus a far 'sky shell' sampled from train images.
-     Held-out images are never read here.
+     All images are prepared, but only TRAIN images supply initialization colours.
   6. (--strict-lidar) the time-nearest lidar sweep of every held-out frame is reserved for depth
      evaluation: it is excluded from the init, and sparse depth maps for TRAIN frames are built only from
      the remaining sweeps (see d3gs/lidar.py). Held-out depth maps go to eval_depth/ (read only by evaluate.py).
@@ -31,6 +31,8 @@ from d3gs.av2io import list_frames, list_sweeps, load_camera_calib, load_poses, 
 from d3gs.geometry import project, resize_intrinsics, se3_inverse, transform_points  # noqa: E402
 from d3gs.split import holdout_split  # noqa: E402
 from d3gs.lidar import assert_no_lidar_leak, depth_map, nearest_sweep, split_sweeps  # noqa: E402
+from d3gs.image_io import read_image, write_image  # noqa: E402
+from d3gs.provenance import capture_lidar_sources  # noqa: E402
 
 
 def voxel_downsample(pts: np.ndarray, cols: np.ndarray, voxel: float):
@@ -63,14 +65,25 @@ def main() -> None:
     args = ap.parse_args()
 
     log_dir, out = Path(args.log_dir), Path(args.out)
-    (out / "images").mkdir(parents=True, exist_ok=True)
+    if out.exists() and any(out.iterdir()):
+        raise ValueError("prepared output must be new or empty; stale data must not be reused")
+    for name in ("width", "height", "crop_bottom", "holdout_every", "train_stride", "lidar_every", "max_lidar_pts"):
+        if getattr(args, name) <= 0:
+            raise ValueError(f"{name} must be positive")
+    if args.holdout_every < 2 or args.n_sky < 0 or not np.isfinite(args.voxel) or args.voxel <= 0 or not np.isfinite(args.speed_thresh) or args.speed_thresh < 0:
+        raise ValueError("invalid holdout, sky count, voxel or speed threshold")
     rng = np.random.default_rng(args.seed)
 
     calib = load_camera_calib(log_dir, args.camera)
     poses = load_poses(log_dir)
     frames = list_frames(log_dir, args.camera)
+    if not frames or args.crop_bottom > calib.height:
+        raise ValueError("nonempty frames and a crop within the source height are required")
     train, test = holdout_split(len(frames), args.holdout_every)
     train = [i for i in train if i % args.train_stride == 0]
+    if not train or not test:
+        raise ValueError("preparation requires nonempty train and held-out cohorts")
+    (out / "images").mkdir(parents=True, exist_ok=True)
 
     # --- camera poses ------------------------------------------------------
     city_SE3_cam = np.stack([poses.city_SE3_ego(t) @ calib.ego_SE3_cam for t, _ in frames])
@@ -87,10 +100,12 @@ def main() -> None:
     map1, map2 = cv2.initUndistortRectifyMap(K_full, dist, None, K_full, (calib.width, calib.height), cv2.CV_32FC1)
     small = []
     for i, (t, p) in enumerate(frames):
-        img = cv2.imread(str(p), cv2.IMREAD_COLOR)
+        img = read_image(p, cv2.IMREAD_COLOR)
+        if img.shape != (calib.height, calib.width, 3):
+            raise ValueError(f"source image does not match camera resolution: {p}")
         und = cv2.remap(img, map1, map2, cv2.INTER_LINEAR)[: args.crop_bottom]
         sm = cv2.resize(und, (args.width, args.height), interpolation=cv2.INTER_AREA)
-        cv2.imwrite(str(out / "images" / f"{i:04d}.png"), sm)
+        write_image(out / "images" / f"{i:04d}.png", sm)
         small.append(sm[:, :, ::-1])  # RGB
 
     # --- lidar init (train cameras only) -------------------------------------
@@ -102,6 +117,8 @@ def main() -> None:
     train_sw, eval_sw = split_sweeps(sweep_ts, t_frames, test)
     if args.strict_lidar:
         init_idx = [k for k in init_idx if k not in set(eval_sw)]
+    if not init_idx or (args.strict_lidar and not train_sw):
+        raise ValueError("no usable initialization/training lidar sweeps remain")
     all_p, all_c, n_raw = [], [], 0
     for ts, sp in [sweeps[k] for k in init_idx]:
         xyz = load_sweep_xyz(sp)
@@ -136,8 +153,8 @@ def main() -> None:
     d = rng.uniform(150.0, 300.0, args.n_sky)
     rays = (Kinv @ np.stack([u, v, np.ones_like(u)])).T
     rays /= np.linalg.norm(rays, axis=1, keepdims=True)
-    sky_p = np.stack([transform_points(c2w[j], (rays[k] * d[k])[None])[0] for k, j in enumerate(js)])
-    sky_c = np.stack([small[j][int(round(v[k])), int(round(u[k]))] / 255.0 for k, j in enumerate(js)])
+    sky_p = np.array([transform_points(c2w[j], (rays[k] * d[k])[None])[0] for k, j in enumerate(js)]).reshape(-1, 3)
+    sky_c = np.array([small[j][int(round(v[k])), int(round(u[k]))] / 255.0 for k, j in enumerate(js)]).reshape(-1, 3)
 
     np.savez_compressed(out / "init_points.npz", xyz=np.concatenate([pts, sky_p]).astype(np.float32),
                         rgb=np.concatenate([cols, sky_c]).astype(np.float32),
@@ -159,6 +176,7 @@ def main() -> None:
     split = {"policy": "strict" if args.strict_lidar else "legacy", "sweep_ts": sweep_ts.tolist(),
              "eval_sweep_ts": sweep_ts[eval_sw].tolist(), "init_sweep_ts": sweep_ts[init_idx].tolist(),
              "depth_sweep_ts": []}
+    split["eval_source_sha256"] = capture_lidar_sources(log_dir, split["eval_sweep_ts"])
     if args.strict_lidar:
         assert_no_lidar_leak(split["init_sweep_ts"], split["eval_sweep_ts"])
 
@@ -175,8 +193,8 @@ def main() -> None:
         moving_masks = {}
         for i, (t, _) in enumerate(frames):
             mov, veh, n = frame_masks(tracks, int(t), K, city_SE3_cam[i], args.width, args.height, args.speed_thresh)
-            cv2.imwrite(str(out / "masks" / "moving" / f"{i:04d}.png"), mov.astype(np.uint8) * 255)
-            cv2.imwrite(str(out / "masks" / "vehicles" / f"{i:04d}.png"), veh.astype(np.uint8) * 255)
+            write_image(out / "masks" / "moving" / f"{i:04d}.png", mov.astype(np.uint8) * 255)
+            write_image(out / "masks" / "vehicles" / f"{i:04d}.png", veh.astype(np.uint8) * 255)
             moving_masks[i] = mov
             fr_mov.append(float(mov.mean()))
             fr_veh.append(float(veh.mean()))

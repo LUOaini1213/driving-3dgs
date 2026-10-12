@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "purpose": "content-integrity-only; not a training or browser verification",
+  "asset": "full_7k.splat",
+  "page": "viewer.html",
+  "files": {
+    "full_7k.splat": {
+      "sha256": "2dc35c0f05432772867395d2bad81101e76e30dead666671d37c5d1a4bdfb948",
+      "bytes": 9918624,
+      "mode": "raw"
+    },
+    "viewer.html": {
+      "sha256": "8785727d0e757009de2b652b1c6116a67f5e934d84a7907710ed4b6178e2893f",
+      "bytes": 2992,
+      "mode": "utf8-lf"
+    }
+  }
+}
