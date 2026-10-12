@@ -1,0 +1,7 @@
+# Keep the original README's committed CRLF bytes; permit that existing style.
+README.md -text whitespace=cr-at-eol
+# New publication sources have portable LF bytes.
+site/** text eol=lf
+scripts/build_viewer.py text eol=lf
+docs/PUBLIC_VIEWER.md text eol=lf
+.github/workflows/pages.yml text eol=lf

@@ -22,6 +22,7 @@ SOFTWARE.
 
 ---
 Data notice: the Argoverse 2 images and everything derived from them in this
-repository (docs/img/*, docs/preview.html, results/*) are Data (c) 2021 Argo AI,
+repository (docs/img/*, docs/splat/*, docs/preview.html, results/* and their
+published scene/preview copies) are Data (c) 2021 Argo AI,
 LLC, licensed CC BY-NC-SA 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/),
 non-commercial use only. The MIT license above does not apply to them.

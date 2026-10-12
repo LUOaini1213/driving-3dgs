@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Inspect a real, compressed 3D Gaussian Splatting reconstruction of an eight-second Argoverse 2 driving clip.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Driving 3DGS — an eight-second scene</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="viewer.css">
+  <script src="viewer.js" defer></script>
+</head>
+<body>
+  <header class="masthead wrap">
+    <a class="wordmark" href="./" aria-label="Driving 3DGS home"><span class="mark">D3</span> Driving 3DGS</a>
+    <a class="source-link" href="https://github.com/LUOaini1213/driving-3dgs" target="_blank" rel="noopener noreferrer">Source repository <span aria-hidden="true">↗</span></a>
+  </header>
+  <main class="wrap">
+    <section class="intro">
+      <p class="eyebrow">A small driving-scene reconstruction · Argoverse 2</p>
+      <h1>Eight seconds on the road.<br>A scene you can inspect.</h1>
+      <p class="lede">One front-facing camera, calibrated vehicle poses and a real 3D Gaussian Splatting reconstruction. Explore the compact web export below, or keep the recorded preview.</p>
+    </section>
+
+    <section class="scene-panel" aria-labelledby="scene-title">
+      <div class="scene-heading"><div><p class="eyebrow">Interactive scene</p><h2 id="scene-title">Start at held-out camera 84</h2></div><span class="version-chip">full_7k · compact export</span></div>
+      <div class="stage" id="stage" data-mode="preview">
+        <img class="preview" id="preview" src="assets/preview.jpg" alt="Recorded browser render of the driving scene: road, trees and buildings, with visible reconstruction artifacts." width="960" height="600">
+        <div class="preview-label" id="preview-label">Recorded preview · load 3D to interact</div>
+      </div>
+      <div class="controls">
+        <button class="button primary" id="load">Explore in 3D <span>9.9 MB scene</span></button>
+        <button class="button" id="reset" disabled>Reset view</button>
+        <button class="button" id="stop" disabled>Return to preview</button>
+      </div>
+      <div class="load-status" id="load-status" role="status" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span><span id="status-text">Preview ready. The 3D scene downloads only when you choose to load it.</span>
+        <span id="progress-label" aria-hidden="true"></span>
+      </div>
+      <progress id="progress" max="100" hidden aria-label="Scene download progress"></progress>
+      <p class="controls-help"><strong>Mouse:</strong> drag to orbit, right-drag to pan, scroll to zoom. <strong>Touch:</strong> one finger to orbit, pinch to zoom, two fingers to pan. Reset returns to the recorded camera; returning to preview releases the 3D frame.</p>
+      <noscript><p class="fallback">JavaScript is required for interaction. The recorded preview and evidence links remain available.</p></noscript>
+    </section>
+
+    <section class="facts" aria-label="Scene facts">
+      <div><strong>309,957</strong><span>exported Gaussians, from 557,802 trained</span></div>
+      <div><strong>9.9 MB</strong><span>pruned scene · view-independent colour</span></div>
+      <div><strong>8 seconds</strong><span>one clip · one front-facing camera</span></div>
+    </section>
+    <div class="notes-grid">
+      <section class="note"><p class="eyebrow">What this shows</p><h2>A compact, real model export</h2>
+        <p>This is the <code>full_7k</code> web subset, not the larger 30k model. The archived gsplat evaluation gives 27.76 dB held-out PSNR for the full 7k model and 26.56 dB for this pruned, zero-order-colour subset. Those are recorded offline measurements, not a new browser accuracy benchmark.</p>
+        <a href="https://github.com/LUOaini1213/driving-3dgs/blob/__BASELINE_COMMIT__/README.md#网页查看器" target="_blank" rel="noopener noreferrer">Read the export comparison ↗</a>
+      </section>
+      <section class="note"><p class="eyebrow">Known limits</p><h2>Look around, with context</h2>
+        <p>Moving objects are not modelled. Near-camera floaters, blurred textures and gaps outside the captured path remain visible. Off-path views have no RGB ground truth. This single, short clip does not establish general driving-scene performance.</p>
+        <p>WebGL 2 and WebAssembly are required. High-density screens render at one device pixel per CSS pixel to limit buffer size. No phone frame-rate or memory guarantee is claimed; the preview is available without loading the scene.</p>
+      </section>
+    </div>
+    <section class="evidence" aria-labelledby="evidence-title">
+      <div><p class="eyebrow">Inspect the evidence</p><h2 id="evidence-title">The scene, and its boundaries</h2></div>
+      <a href="source-index.json">Published file hashes</a>
+      <a href="https://github.com/LUOaini1213/driving-3dgs/blob/__BASELINE_COMMIT__/results/web_export.json" target="_blank" rel="noopener noreferrer">Archived export metadata ↗</a>
+      <a href="https://github.com/LUOaini1213/driving-3dgs/blob/__BASELINE_COMMIT__/README.md" target="_blank" rel="noopener noreferrer">Methods, baselines &amp; failures ↗</a>
+    </section>
+  </main>
+  <footer class="wrap">
+    <p>Data © 2021 Argo AI, LLC. The scene and preview are Argoverse 2 derivatives, <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>, for non-commercial technical demonstration. Code and renderer libraries: MIT. <a href="NOTICES.txt">Attribution and licences</a>.</p>
+    <p class="release">__SOURCE_LABEL__ · <a href="https://github.com/LUOaini1213/driving-3dgs/tree/__SOURCE_COMMIT__" target="_blank" rel="noopener noreferrer">source __SOURCE_SHORT__ ↗</a></p>
+  </footer>
+</body>
+</html>
