@@ -1,4 +1,4 @@
-import { scenePromise } from "./scene-promise.js";
+import { scenePromise, viewerWithDiagnostics } from "./scene-promise.js";
 
 const channel = "driving-3dgs-viewer-v1";
 const origin = location.origin;
@@ -40,7 +40,9 @@ async function start() {
   }
   try {
     const library = await import("./vendor/gaussian-splats-3d.module.js");
-    viewer = new library.Viewer({
+    const Viewer = viewerWithDiagnostics(library.Viewer,
+      (error) => console.error("Driving 3DGS renderer operation failed.", error));
+    viewer = new Viewer({
       cameraUp: [0, 0, 1], initialCameraPosition: position, initialCameraLookAt: target,
       sharedMemoryForWorkers: false, gpuAcceleratedSort: false, integerBasedSort: false,
       ignoreDevicePixelRatio: true, renderMode: library.RenderMode.OnChange,
