@@ -9,7 +9,7 @@ export function scenePromise(operation) {
 export function viewerWithDiagnostics(Viewer, reportFailure) {
   return class extends Viewer {
     updateError(error, ...args) {
-      reportFailure(error);
+      try { reportFailure(error); } catch { /* Diagnostics cannot replace the renderer error. */ }
       return super.updateError(error, ...args);
     }
   };

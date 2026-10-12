@@ -33,3 +33,10 @@ test("actual pinned Viewer retains the original cause before its generic load er
   assert.equal(actual.constructor, expected.constructor);
   assert.notEqual(actual, original);
 });
+
+test("diagnostic callback failure cannot replace the renderer rejection", () => {
+  const DiagnosticViewer = viewerWithDiagnostics(Viewer, () => { throw new Error("logger failed"); });
+  const instance = Object.create(DiagnosticViewer.prototype);
+  const actual = instance.updateError(new Error("original cause"), "existing renderer error");
+  assert.equal(actual.message, "existing renderer error");
+});
