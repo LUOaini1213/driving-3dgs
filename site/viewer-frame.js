@@ -1,4 +1,4 @@
-import { scenePromise, viewerWithDiagnostics } from "./scene-promise.js";
+import { scenePromise, viewerWithDiagnostics, withDecodedScene } from "./scene-promise.js";
 
 const channel = "driving-3dgs-viewer-v1";
 const origin = location.origin;
@@ -51,14 +51,16 @@ async function start() {
     viewer.renderer.domElement.addEventListener("webglcontextlost", (event) => {
       event.preventDefault(); report("error", { code: "context" });
     });
-    await scenePromise(viewer.addSplatScene("./assets/full_7k.splat", {
-      format: library.SceneFormat.Splat, splatAlphaRemovalThreshold: 5,
-      showLoadingUI: false, progressiveLoad: false,
-      onProgress: (percent, label, loaderStatus) => {
-        // The pinned renderer uses 0=Downloading, 1=Processing, 2=Done.
-        report(loaderStatus === 0 ? "downloading" : "preparing", { percent });
-      },
-    }));
+    report("downloading");
+    await withDecodedScene("./assets/full_7k.splat", 9918624, (url) => {
+      report("preparing");
+      return scenePromise(viewer.addSplatScene(url, {
+        format: library.SceneFormat.Splat, splatAlphaRemovalThreshold: 5,
+        showLoadingUI: false, progressiveLoad: false,
+        // Local Blob reads are preparation, not another network download.
+        onProgress: () => report("preparing"),
+      }));
+    });
     document.querySelector(".frame-fallback").remove();
     viewer.start();
     // Keep the same first-render readiness boundary as the archived viewer check.
