@@ -1,0 +1,25 @@
+Driving 3DGS public viewer
+
+Scene and preview: Data (c) 2021 Argo AI, LLC.
+Derived from the Argoverse 2 Sensor Dataset. Licensed CC BY-NC-SA 4.0:
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+Non-commercial technical demonstration only. Attribution and ShareAlike apply.
+The scene is the pruned full_7k export with view-independent (zero-order) colour.
+The preview is a recorded browser screenshot. The viewer interface is adapted
+for publication; no original image, lidar scan, training checkpoint or full model
+is distributed by this website. The MIT code licence does not cover these data.
+
+Argoverse 2: B. Wilson et al., Argoverse 2: Next Generation Datasets for
+Self-Driving Perception and Forecasting, NeurIPS Datasets and Benchmarks, 2021.
+Method: B. Kerbl et al., 3D Gaussian Splatting for Real-Time Radiance Field
+Rendering, SIGGRAPH 2023. Training implementation: gsplat (Apache-2.0).
+
+Viewer code: (c) 2026 Wenjie Luo, MIT. See LICENSE-code.txt.
+Renderer: @mkkellogg/gaussian-splats-3d 0.4.7, MIT. See vendor/LICENSE-gaussian.txt.
+Three.js: three 0.160.0, MIT. See vendor/LICENSE-three.txt.
+The dependencies are pinned and served from this same website, including the
+renderer source map. They are not fetched from a CDN at runtime.
+
+This is one short, single-camera clip. It has no dynamic-object model, no
+off-path RGB ground truth and no general driving-scene or phone-performance
+guarantee. Visible floaters, gaps and blur remain part of the published result.

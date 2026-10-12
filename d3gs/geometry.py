@@ -13,10 +13,67 @@ from __future__ import annotations
 import numpy as np
 
 
+def normalise_quaternion(q: np.ndarray) -> np.ndarray:
+    """Normalise finite nonzero (..., 4) quaternions without norm overflow/underflow."""
+    q = np.asarray(q, dtype=np.float64)
+    if q.ndim < 1 or q.shape[-1] != 4 or not np.isfinite(q).all():
+        raise ValueError("quaternions must be finite with shape (..., 4)")
+    scale = np.max(np.abs(q), axis=-1, keepdims=True)
+    if (scale == 0).any():
+        raise ValueError("zero quaternion has no rotation")
+    q = q / scale
+    return q / np.linalg.norm(q, axis=-1, keepdims=True)
+
+
+def _rotation(R):
+    R = np.asarray(R, dtype=np.float64)
+    if R.ndim < 2 or R.shape[-2:] != (3, 3) or not np.isfinite(R).all():
+        raise ValueError("rotation must have finite shape (..., 3, 3)")
+    if not np.allclose(R @ np.swapaxes(R, -1, -2), np.eye(3), atol=1e-6, rtol=1e-5) or not np.allclose(np.linalg.det(R), 1, atol=1e-6, rtol=1e-5):
+        raise ValueError("rotation must be orthonormal and right handed")
+    return R
+
+
+def validate_transform(T):
+    T = np.asarray(T, dtype=np.float64)
+    if T.ndim < 2 or T.shape[-2:] != (4, 4) or not np.isfinite(T).all():
+        raise ValueError("transform must have finite shape (..., 4, 4)")
+    if not np.allclose(T[..., 3, :], [0, 0, 0, 1], atol=1e-8, rtol=0):
+        raise ValueError("invalid homogeneous transform row")
+    _rotation(T[..., :3, :3])
+    return T
+
+
+def validate_intrinsics(K):
+    K = np.asarray(K, dtype=np.float64)
+    if K.shape != (3, 3) or not np.isfinite(K).all() or K[0, 0] <= 0 or K[1, 1] <= 0:
+        raise ValueError("intrinsics must be finite 3x3 with positive focal lengths")
+    if not np.array_equal(K[2], [0, 0, 1]):
+        raise ValueError("intrinsics must have homogeneous row [0, 0, 1]")
+    return K
+
+
+def image_size(wh):
+    if len(wh) != 2 or any(isinstance(v, (bool, np.bool_)) or not isinstance(v, (int, np.integer)) or v <= 0 for v in wh):
+        raise ValueError("image dimensions must be positive integers")
+    return int(wh[0]), int(wh[1])
+
+
+def timestamps_ns(ts, *, allow_empty=False):
+    ts = np.asarray(ts)
+    if ts.ndim != 1 or (not len(ts) and not allow_empty):
+        raise ValueError("timestamps must be a nonempty vector")
+    if ts.size and (ts.dtype.kind not in 'iu' or np.any(ts > np.iinfo(np.int64).max)):
+        raise ValueError("timestamps must be integer nanoseconds in int64 range")
+    ts = ts.astype(np.int64)
+    if np.any(ts[1:] <= ts[:-1]):
+        raise ValueError("timestamps must be strictly increasing and unique")
+    return ts
+
+
 def quat_to_rotmat(q: np.ndarray) -> np.ndarray:
     """Scalar-first unit quaternion(s) (..., 4) -> rotation matrix (..., 3, 3)."""
-    q = np.asarray(q, dtype=np.float64)
-    q = q / np.linalg.norm(q, axis=-1, keepdims=True)
+    q = normalise_quaternion(q)
     w, x, y, z = q[..., 0], q[..., 1], q[..., 2], q[..., 3]
     R = np.empty(q.shape[:-1] + (3, 3), dtype=np.float64)
     R[..., 0, 0] = 1 - 2 * (y * y + z * z)
@@ -33,7 +90,9 @@ def quat_to_rotmat(q: np.ndarray) -> np.ndarray:
 
 def rotmat_to_quat(R: np.ndarray) -> np.ndarray:
     """Rotation matrix (3, 3) -> scalar-first unit quaternion with w >= 0."""
-    R = np.asarray(R, dtype=np.float64)
+    R = _rotation(R)
+    if R.shape != (3, 3):
+        raise ValueError("rotmat_to_quat expects one 3x3 rotation")
     tr = np.trace(R)
     if tr > 0:
         s = np.sqrt(tr + 1.0) * 2
@@ -65,6 +124,9 @@ def rotmat_to_quat(R: np.ndarray) -> np.ndarray:
 
 
 def se3(R: np.ndarray, t: np.ndarray) -> np.ndarray:
+    R, t = _rotation(R), np.asarray(t, dtype=np.float64)
+    if R.shape != (3, 3) or t.shape != (3,) or not np.isfinite(t).all():
+        raise ValueError("se3 expects a rotation and finite translation (3,)")
     T = np.eye(4)
     T[:3, :3] = R
     T[:3, 3] = t
@@ -77,7 +139,7 @@ def se3_from_quat_trans(q: np.ndarray, t: np.ndarray) -> np.ndarray:
 
 def se3_inverse(T: np.ndarray) -> np.ndarray:
     """Closed-form inverse of a rigid transform (…, 4, 4)."""
-    T = np.asarray(T, dtype=np.float64)
+    T = validate_transform(T)
     R = T[..., :3, :3]
     t = T[..., :3, 3]
     Rt = np.swapaxes(R, -1, -2)
@@ -91,12 +153,16 @@ def se3_inverse(T: np.ndarray) -> np.ndarray:
 def transform_points(T: np.ndarray, pts: np.ndarray) -> np.ndarray:
     """Apply 4x4 transform to (N, 3) points."""
     pts = np.asarray(pts, dtype=np.float64)
+    T = validate_transform(T)
+    if T.shape != (4, 4) or pts.ndim != 2 or pts.shape[1] != 3 or not np.isfinite(pts).all():
+        raise ValueError("expected one transform and finite points (N, 3)")
     return pts @ T[:3, :3].T + T[:3, 3]
 
 
 def slerp(q0: np.ndarray, q1: np.ndarray, a: float) -> np.ndarray:
-    q0 = np.asarray(q0, float) / np.linalg.norm(q0)
-    q1 = np.asarray(q1, float) / np.linalg.norm(q1)
+    q0, q1 = normalise_quaternion(q0), normalise_quaternion(q1)
+    if q0.shape != (4,) or q1.shape != (4,) or not np.isfinite(a) or not 0 <= a <= 1:
+        raise ValueError("slerp expects two quaternions and weight in [0, 1]")
     d = float(np.dot(q0, q1))
     if d < 0:
         q1, d = -q1, -d
@@ -113,13 +179,19 @@ def interpolate_pose(ts: np.ndarray, quats: np.ndarray, trans: np.ndarray, t_que
     ``ts`` must be sorted ascending. Exact matches return the stored pose.
     Raises if the query lies outside the sampled range (no extrapolation).
     """
-    ts = np.asarray(ts, dtype=np.int64)
+    ts = timestamps_ns(ts)
+    quats, trans = np.asarray(quats, float), np.asarray(trans, float)
+    if quats.shape != (len(ts), 4) or trans.shape != (len(ts), 3) or not np.isfinite(trans).all():
+        raise ValueError("pose arrays must match the timestamps and have finite translations")
+    normalise_quaternion(quats)
+    if isinstance(t_query, (bool, np.bool_)) or not isinstance(t_query, (int, np.integer)):
+        raise ValueError("query timestamp must be integer nanoseconds")
     i = int(np.searchsorted(ts, t_query))
     if i < len(ts) and ts[i] == t_query:
         return se3_from_quat_trans(quats[i], trans[i])
     if i == 0 or i == len(ts):
         raise ValueError(f"timestamp {t_query} outside pose range [{ts[0]}, {ts[-1]}]")
-    t0, t1 = ts[i - 1], ts[i]
+    t0, t1 = int(ts[i - 1]), int(ts[i])
     a = (t_query - t0) / (t1 - t0)
     q = slerp(quats[i - 1], quats[i], a)
     t = (1 - a) * np.asarray(trans[i - 1], float) + a * np.asarray(trans[i], float)
@@ -127,7 +199,7 @@ def interpolate_pose(ts: np.ndarray, quats: np.ndarray, trans: np.ndarray, t_que
 
 
 def intrinsics_matrix(fx: float, fy: float, cx: float, cy: float) -> np.ndarray:
-    return np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]])
+    return validate_intrinsics([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]])
 
 
 def resize_intrinsics(K: np.ndarray, src_wh: tuple[int, int], dst_wh: tuple[int, int]) -> np.ndarray:
@@ -136,11 +208,13 @@ def resize_intrinsics(K: np.ndarray, src_wh: tuple[int, int], dst_wh: tuple[int,
     Uses the pixel-centre convention of OpenCV (pixel i covers [i-0.5, i+0.5]),
     i.e. u' + 0.5 = s * (u + 0.5).
     """
+    K = validate_intrinsics(K)
+    src_wh, dst_wh = image_size(src_wh), image_size(dst_wh)
     sx = dst_wh[0] / src_wh[0]
     sy = dst_wh[1] / src_wh[1]
     K2 = np.array(K, dtype=np.float64).copy()
-    K2[0, 0] *= sx
-    K2[1, 1] *= sy
+    K2[0, :2] *= sx
+    K2[1, :2] *= sy
     K2[0, 2] = sx * (K[0, 2] + 0.5) - 0.5
     K2[1, 2] = sy * (K[1, 2] + 0.5) - 0.5
     return K2
@@ -148,6 +222,7 @@ def resize_intrinsics(K: np.ndarray, src_wh: tuple[int, int], dst_wh: tuple[int,
 
 def project(K: np.ndarray, cam_SE3_world: np.ndarray, pts_world: np.ndarray):
     """Project world points; returns (uv (N,2), depth (N,))."""
+    K = validate_intrinsics(K)
     pc = transform_points(cam_SE3_world, pts_world)
     z = pc[:, 2]
     with np.errstate(divide="ignore", invalid="ignore"):

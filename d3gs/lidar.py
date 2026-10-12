@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .geometry import project
+from .geometry import project, image_size
 
 
 class LidarLeakError(RuntimeError):
@@ -59,6 +59,9 @@ def depth_map(K: np.ndarray, cam_SE3_world: np.ndarray, pts_world: np.ndarray, W
     A point lands in pixel (round(u), round(v)) (pixel centres at integer coordinates, the same
     convention as ``resize_intrinsics``); when several points hit one pixel the nearest wins.
     """
+    W, H = image_size((W, H))
+    if not np.isfinite([near, far]).all() or not 0 < near < far:
+        raise ValueError("depth planes must be finite with 0 < near < far")
     uv, z = project(K, cam_SE3_world, pts_world)
     ok = (z > near) & (z < far) & np.isfinite(uv).all(1)
     u = np.round(uv[ok, 0]).astype(np.int64)
@@ -73,11 +76,25 @@ def depth_map(K: np.ndarray, cam_SE3_world: np.ndarray, pts_world: np.ndarray, W
 
 
 def depth_errors(pred: np.ndarray, gt: np.ndarray, valid: np.ndarray | None = None, tol: float = 0.5) -> dict:
-    """Errors of a dense predicted depth against sparse lidar depth (gt > 0 marks a return)."""
+    """Errors on the fixed ``(gt > 0) & valid`` cohort; invalid predictions there raise.
+
+    Predictions outside that cohort are irrelevant. An empty cohort returns n=0/null metrics.
+    """
+    pred, gt = np.asarray(pred, dtype=np.float64), np.asarray(gt, dtype=np.float64)
+    if pred.shape != gt.shape:
+        raise ValueError("prediction/ground-truth shape mismatch")
+    if not np.isfinite(gt).all() or (gt < 0).any():
+        raise ValueError("ground-truth depth must be finite and nonnegative")
+    if np.ndim(tol) or isinstance(tol, (bool, np.bool_)) or not np.isfinite(tol) or tol < 0:
+        raise ValueError("depth tolerance must be finite and nonnegative")
     m = gt > 0
     if valid is not None:
+        valid = np.asarray(valid)
+        if valid.shape != gt.shape or not np.isin(valid, [0, 1]).all():
+            raise ValueError("valid mask must have the depth shape and boolean/0/1 values")
         m &= valid.astype(bool)
-    m &= np.isfinite(pred)
+    if not np.isfinite(pred[m]).all():
+        raise ValueError("nonfinite prediction on the evaluation depth cohort")
     if not m.any():
         return {"n": 0, "median_abs_m": None, "mean_abs_m": None, "within_tol": None, "abs_rel": None}
     e = np.abs(pred[m].astype(np.float64) - gt[m].astype(np.float64))

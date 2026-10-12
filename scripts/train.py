@@ -1,6 +1,7 @@
 """Train 3D Gaussian Splatting (gsplat rasteriser + gsplat DefaultStrategy densification).
 
-Only TRAIN frames are ever loaded here. Writes ckpt.pt and train_stats.json to --out.
+Only TRAIN pixels are decoded for optimization; all prepared files are hashed for identity.
+Writes ckpt.pt and train_stats.json to a new --out directory.
 
 Usage:
   python scripts/train.py --work D:/driving-3dgs/work/<log> --out D:/driving-3dgs/runs/<name> --steps 7000
@@ -19,6 +20,17 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from d3gs.lidar import assert_no_lidar_leak  # noqa: E402
 from d3gs.scene import Scene, exp_lr, init_params, render, ssim_torch  # noqa: E402
+from d3gs.provenance import capture_scene, make_provenance  # noqa: E402
+
+
+def sparse_depth_loss(prediction, ground_truth):
+    """No return means no depth term; invalid values must not hide behind an empty mask."""
+    if prediction.shape != ground_truth.shape or not torch.isfinite(ground_truth).all() or (ground_truth < 0).any():
+        raise ValueError("invalid training depth ground truth")
+    if not torch.isfinite(prediction).all():
+        raise ValueError("nonfinite rendered training depth")
+    valid = ground_truth > 0
+    return (prediction[valid] - ground_truth[valid]).abs().mean() if valid.any() else prediction.sum() * 0
 
 
 def main() -> None:
@@ -37,19 +49,18 @@ def main() -> None:
                     help=">0: add lambda * L1(rendered expected depth, lidar depth) on train pixels with a lidar return")
     args = ap.parse_args()
 
-    import gsplat
-    from gsplat.strategy import DefaultStrategy
-
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(args.seed)
     dev = "cuda"
     out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
+    if out.exists() and any(out.iterdir()):
+        raise ValueError("training output must be new or empty; refusing an existing run")
+    if args.steps <= 0 or args.sh_degree < 0 or not np.isfinite(args.depth_lambda) or args.depth_lambda < 0:
+        raise ValueError("invalid training steps, SH degree or depth weight")
 
     sc = Scene(args.work)
-    init = np.load(sc.dir / "init_points.npz")
-    params = init_params(init["xyz"], init["rgb"], args.sh_degree, dev)
-    n_init = len(params["means"])
+    xyz, rgb = sc.initial_points()
+    initial_identity = capture_scene(sc)
 
     split = sc.lidar_split
     if args.depth_lambda > 0:
@@ -58,6 +69,12 @@ def main() -> None:
         assert_no_lidar_leak(split["init_sweep_ts"] + split["depth_sweep_ts"], split["eval_sweep_ts"])
     elif split is not None and split["policy"] == "strict":
         assert_no_lidar_leak(split["init_sweep_ts"], split["eval_sweep_ts"])
+
+    import gsplat
+    from gsplat.strategy import DefaultStrategy
+    params = init_params(xyz, rgb, args.sh_degree, dev)
+    n_init = len(params["means"])
+    out.mkdir(parents=True, exist_ok=True)
 
     imgs = {i: torch.from_numpy(sc.image(i)) for i in sc.train}  # CPU uint8, train only
     masks = ({i: torch.from_numpy(sc.mask(i, args.mask))[..., None] for i in sc.train} if args.mask != "none" else None)
@@ -91,15 +108,14 @@ def main() -> None:
             img, _, info = render(params, viewmats[i], K, sc.W, sc.H, sh)
         strategy.step_pre_backward(params, opts, state, step, info)
         if masks is not None:
-            # masked pixels are replaced by the ground truth, so they contribute exactly zero loss/gradient
+            # Masked prediction gradients and L1 error are zero. SSIM neighbours still depend on the GT.
             m = masks[i].to(dev, non_blocking=True)
             img = torch.where(m, gt, img)
         l1 = (img - gt).abs().mean()
         loss = (1 - args.ssim_lambda) * l1 + args.ssim_lambda * (1 - ssim_torch(img, gt))
         if depths is not None:
             dl = depths[i].to(dev, non_blocking=True)
-            valid = dl > 0
-            loss = loss + args.depth_lambda * (dep[valid] - dl[valid]).abs().mean()
+            loss = loss + args.depth_lambda * sparse_depth_loss(dep, dl)
         loss.backward()
         opts["means"].param_groups[0]["lr"] = exp_lr(step, args.steps, lrs["means"], lrs["means"] * 0.01)
         for o in opts.values():
@@ -130,6 +146,7 @@ def main() -> None:
         "gpu": torch.cuda.get_device_name(0), "torch": torch.__version__, "gsplat": gsplat.__version__,
         "work": str(sc.dir), "scene_scale": s, "n_train": len(sc.train), "train_stride": sc.train_stride, "resolution": [sc.W, sc.H], "log": log,
     }
+    stats["provenance"] = make_provenance(sc, out / "ckpt.pt", initial_identity, stats)
     (out / "train_stats.json").write_text(json.dumps(stats, indent=1))
     print(json.dumps({k: v for k, v in stats.items() if k != "log"}, indent=1))
 

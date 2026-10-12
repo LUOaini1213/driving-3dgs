@@ -15,7 +15,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .geometry import quat_to_rotmat, se3, se3_from_quat_trans, slerp, rotmat_to_quat
+from .geometry import (quat_to_rotmat, se3, se3_from_quat_trans, slerp, rotmat_to_quat,
+                       image_size, validate_intrinsics, validate_transform, timestamps_ns)
 
 VEHICLE_CATEGORIES = {
     "REGULAR_VEHICLE", "LARGE_VEHICLE", "BUS", "BOX_TRUCK", "TRUCK", "TRUCK_CAB", "VEHICULAR_TRAILER",
@@ -28,6 +29,9 @@ _EDGES = [(0, 1), (1, 3), (3, 2), (2, 0), (4, 5), (5, 7), (7, 6), (6, 4), (0, 4)
 
 def cuboid_corners(dims) -> np.ndarray:
     """8 corners (object frame) of a cuboid centred at the origin; dims = (length_x, width_y, height_z)."""
+    dims = np.asarray(dims, dtype=np.float64)
+    if dims.shape != (3,) or not np.isfinite(dims).all() or (dims <= 0).any():
+        raise ValueError("cuboid dimensions must be three finite positive lengths")
     l, w, h = (float(d) / 2 for d in dims)
     return np.array([[sx * l, sy * w, sz * h] for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)])
 
@@ -98,6 +102,10 @@ def cuboid_mask(K: np.ndarray, cam_SE3_obj: np.ndarray, dims, W: int, H: int, ne
 
     Pixel centres are at integer coordinates (the convention of ``resize_intrinsics``).
     """
+    W, H = image_size((W, H))
+    K, cam_SE3_obj = validate_intrinsics(K), validate_transform(cam_SE3_obj)
+    if cam_SE3_obj.shape != (4, 4) or not np.isfinite(near) or near <= 0:
+        raise ValueError("cuboid projection needs one pose and a finite positive near plane")
     c = cuboid_corners(dims)
     pc = c @ cam_SE3_obj[:3, :3].T + cam_SE3_obj[:3, 3]
     pc = _clip_edges_near(pc, near)
@@ -138,11 +146,27 @@ class Track:
     dims: np.ndarray        # (N, 3) length, width, height
     speed: np.ndarray       # (N,) m/s, from centre displacement over +-window
 
+    def __post_init__(self):
+        self.ts = timestamps_ns(self.ts)
+        self.city_SE3_obj = validate_transform(self.city_SE3_obj)
+        self.dims, self.speed = np.asarray(self.dims, float), np.asarray(self.speed, float)
+        n = len(self.ts)
+        if self.city_SE3_obj.shape != (n, 4, 4) or self.dims.shape != (n, 3) or self.speed.shape != (n,):
+            raise ValueError("track arrays must have one pose, size and speed per timestamp")
+        if not np.isfinite(self.dims).all() or (self.dims <= 0).any() or not np.isfinite(self.speed).all() or (self.speed < 0).any():
+            raise ValueError("track sizes must be positive and speeds nonnegative, all finite")
+
 
 def track_speed(ts: np.ndarray, centres: np.ndarray, half_window_s: float = 0.5) -> np.ndarray:
     """Speed (m/s) per sample: |c(t+w) - c(t-w)| / dt using the samples nearest to t+-w inside the track."""
-    ts = np.asarray(ts, dtype=np.int64)
-    t = ts / 1e9
+    ts = timestamps_ns(ts, allow_empty=True)
+    centres = np.asarray(centres, dtype=np.float64)
+    if centres.shape != (len(ts), 3) or not np.isfinite(centres).all():
+        raise ValueError("track centres must have finite shape (N, 3)")
+    if not np.isfinite(half_window_s) or half_window_s <= 0:
+        raise ValueError("speed window must be finite and positive")
+    # Subtract integer ns before conversion, preserving short intervals at epoch timestamps.
+    t = np.array([(int(v) - int(ts[0])) / 1e9 for v in ts])
     sp = np.zeros(len(ts))
     for k in range(len(ts)):
         a = int(np.argmin(np.abs(t - (t[k] - half_window_s))))
@@ -162,7 +186,7 @@ def build_tracks(ann, poses, t_min: int | None = None, t_max: int | None = None)
     tracks = []
     for uuid, g in ann.groupby("track_uuid"):
         g = g.sort_values("timestamp_ns")
-        ts = g.timestamp_ns.to_numpy(np.int64)
+        ts = timestamps_ns(g.timestamp_ns.to_numpy())
         T = []
         for t, q, p in zip(ts, g[["qw", "qx", "qy", "qz"]].to_numpy(float), g[["tx_m", "ty_m", "tz_m"]].to_numpy(float)):
             if t not in ego_cache:
@@ -180,6 +204,10 @@ def objects_at(tracks: list[Track], t_ns: int, max_gap_ns: int = 60_000_000):
     Inside a track's time span: lerp the centre / slerp the rotation between bracketing samples,
     speed = max of the two. Outside the span by at most ``max_gap_ns``: nearest sample. Otherwise absent.
     """
+    if isinstance(t_ns, (bool, np.bool_)) or not isinstance(t_ns, (int, np.integer)):
+        raise ValueError("query timestamp must be integer nanoseconds")
+    if isinstance(max_gap_ns, (bool, np.bool_)) or not isinstance(max_gap_ns, (int, np.integer)) or max_gap_ns < 0:
+        raise ValueError("maximum gap must be nonnegative integer nanoseconds")
     out = []
     for tr in tracks:
         ts = tr.ts
@@ -187,7 +215,7 @@ def objects_at(tracks: list[Track], t_ns: int, max_gap_ns: int = 60_000_000):
         if i < len(ts) and ts[i] == t_ns:
             out.append((tr, tr.city_SE3_obj[i], tr.dims[i], float(tr.speed[i])))
         elif 0 < i < len(ts):
-            t0, t1 = ts[i - 1], ts[i]
+            t0, t1 = int(ts[i - 1]), int(ts[i])
             a = (t_ns - t0) / (t1 - t0)
             A, B = tr.city_SE3_obj[i - 1], tr.city_SE3_obj[i]
             q = slerp(rotmat_to_quat(A[:3, :3]), rotmat_to_quat(B[:3, :3]), a)
@@ -208,6 +236,10 @@ def frame_masks(tracks, t_ns: int, K, city_SE3_cam: np.ndarray, W: int, H: int, 
     Each cuboid is padded by ``pad_m`` on every side to absorb annotation / timing slack.
     """
     from .geometry import se3_inverse
+    W, H = image_size((W, H))
+    K = validate_intrinsics(K)
+    if not np.isfinite([speed_thresh, pad_m]).all() or speed_thresh < 0 or pad_m < 0:
+        raise ValueError("speed threshold and padding must be finite and nonnegative")
     cam_SE3_city = se3_inverse(city_SE3_cam)
     mov = np.zeros((H, W), bool)
     veh = np.zeros((H, W), bool)
