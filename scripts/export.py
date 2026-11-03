@@ -11,7 +11,7 @@
                    Historical web_subset_sh0 results used the pre-quantization subset.
 
 Usage:
-  python scripts/export.py --run D:/driving-3dgs/runs/full_30k --out D:/driving-3dgs/export/full_30k
+  python scripts/export.py --run "$DATA_ROOT/runs/full_30k" --out "$DATA_ROOT/export/full_30k"
 """
 from __future__ import annotations
 

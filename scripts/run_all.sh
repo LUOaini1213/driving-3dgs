@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # End-to-end reproduction (Git Bash on Windows or Linux). Data/outputs go to $DATA_ROOT.
+# Defaults: PY=python, DATA_ROOT=. (repo root; data/ work/ runs/ export/ torch_home/ are git-ignored).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PY=${PY:-D:/driving-3dgs/env/python.exe}
-DATA_ROOT=${DATA_ROOT:-D:/driving-3dgs}
+PY=${PY:-python}
+DATA_ROOT=${DATA_ROOT:-.}
 LOG=15ec0778-826e-3ed7-9775-54fbf66997f4
 D=$DATA_ROOT/data/$LOG
 
@@ -18,13 +19,16 @@ cp "$D/manifest.json" results/data_manifest.json   # provenance: file list + byt
 "$PY" scripts/prepare.py --log-dir "$D" --out "$DATA_ROOT/work/full"
 "$PY" scripts/prepare.py --log-dir "$D" --out "$DATA_ROOT/work/sparse4" --train-stride 4
 "$PY" scripts/prepare.py --log-dir "$D" --out "$DATA_ROOT/work/strict" --strict-lidar --masks
+#   lidar-only depth baseline on the same held-out cohort (CPU)
+"$PY" scripts/depth_baseline.py --work "$DATA_ROOT/work/strict" --log-dir "$D" \
+    --compare results/runs/strict_7k.json --results results/depth_baselines.json
 
 # 3) train + evaluate (sequential so timings / VRAM are not shared)
 run () {  # name work steps [train args...]
   local name=$1 work=$2 steps=$3; shift 3
   "$PY" scripts/train.py --work "$DATA_ROOT/work/$work" --out "$DATA_ROOT/runs/$name" --steps $steps "$@"
   "$PY" scripts/evaluate.py --work "$DATA_ROOT/work/$work" --run "$DATA_ROOT/runs/$name" --aux "$DATA_ROOT/work/strict" \
-      --results results/runs/$name.json --figs "$DATA_ROOT/runs/$name/figs"
+      --results results/runs/$name.json --figs "$DATA_ROOT/runs/$name/figs" --torch-home "$DATA_ROOT/torch_home"
 }
 run full_7k    full    7000
 run full_30k   full    30000

@@ -8,7 +8,7 @@ AWS account, login or CLI is needed. We fetch only:
   * a handful of lidar sweeps inside that window (for Gaussian initialisation)
 
 Usage:
-  python scripts/download_av2.py --out D:/driving-3dgs/data --split val \
+  python scripts/download_av2.py --out "$DATA_ROOT/data" --split val \
       --log 02678d04-cc9f-3148-9f95-1ba66347dff9 --start 100 --num-frames 160 --lidar-every 4
   python scripts/download_av2.py --out ... --split val --log ... --meta-only
 """
