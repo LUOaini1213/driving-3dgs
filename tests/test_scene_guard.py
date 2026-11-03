@@ -4,7 +4,8 @@ import json
 import numpy as np
 import pytest
 
-from d3gs.scene import Scene
+pytest.importorskip("torch", reason="d3gs.scene needs torch (CI installs CPU torch)")
+from d3gs.scene import Scene  # noqa: E402
 
 
 @pytest.fixture()
