@@ -1,3 +1,10 @@
+# Text files are stored and checked out with LF; result binaries are never converted.
+* text=auto eol=lf
+*.splat binary
+*.jpg binary
+*.png binary
+*.npy binary
+*.feather binary
 # Keep the original README's committed CRLF bytes; permit that existing style.
 README.md -text whitespace=cr-at-eol
 # New publication sources have portable LF bytes.
