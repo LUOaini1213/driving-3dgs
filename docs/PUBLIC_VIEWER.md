@@ -73,6 +73,12 @@ After deployment, verify the HTTPS page and asset URLs, actual nonblank renderin
 reset/return/reload, missing-scene fallback, touch-size layout and source-index hash
 inventory, then add the confirmed URL to README and the portfolio.
 
+Status: the workflow was dispatched on `master` at 6a584b4 on 2026-10-12 and succeeded;
+the site is <https://luoaini1213.github.io/driving-3dgs/>. On 2026-11-03 the page returned
+HTTP 200, `assets/full_7k.splat` returned 9,918,624 bytes, and the live `source-index.json`
+listed the same scene SHA-256 as `docs/splat/asset_manifest.json`. The rendering, touch and
+fallback checks listed above were not repeated in that check.
+
 ## Attribution
 
 Data © 2021 Argo AI, LLC. Scene and preview are Argoverse 2 derivatives under

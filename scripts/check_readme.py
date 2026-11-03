@@ -8,6 +8,7 @@ The README contains generated blocks delimited by <!-- BEGIN:<tag> --> ... <!-- 
   web       splat web export + headless check (results/web_export.json, results/viewer_check.json)
   offpath   laterally shifted views           (results/offpath.json)
   findings  sentences whose numbers are differences computed from the JSON above
+  tldr      the first-screen summary (numbers from the run JSONs and results/depth_baselines.json)
 
   python scripts/check_readme.py --check   # exit 1 if README differs from what the JSON implies
   python scripts/check_readme.py --write   # regenerate the blocks in place
@@ -30,6 +31,8 @@ RUN_ORDER = ["full_7k", "full_30k", "sparse4_7k", "strict_7k", "strict_7k_seed1"
 METHOD_NAME = {"3dgs": "3DGS（本项目）", "copy_nearest": "基线：复制时间最近的训练帧", "init_only": "基线：仅初始化（0 次迭代）"}
 MASK_NAME = {"none": "—", "moving": "移动物体", "vehicles": "全部车辆"}
 MAX_SPLAT_BYTES = 20_000_000
+VIEWER_URL = "https://luoaini1213.github.io/driving-3dgs/"
+BASELINE = "lidar_nearest_train_sweep"
 
 
 def load_json(rel: str) -> dict | None:
@@ -129,7 +132,6 @@ def render_ablation(runs: dict[str, dict]) -> str:
 
 
 def render_depth(runs: dict[str, dict]) -> str:
-    bins = ("0-10m", "10-20m", "20-40m", "40-80m")
     L = ["| 运行 | 初始化/监督是否用到留出帧的评测扫描 | 深度监督 λ | 方法 | 中位绝对误差 (m)↓ 全部 / 静态 | ≤ 0.5 m 占比↑ 全部 / 静态 | "
          "按激光距离分段的中位误差 (m，静态) 0–10 / 10–20 / 20–40 / 40–80 m | 激光点像素数 |",
          "|---|---|---|---|---|---|---|---|"]
@@ -138,13 +140,41 @@ def render_depth(runs: dict[str, dict]) -> str:
         if not d:
             continue
         leak = {True: "否（严格）", False: "**是（泄漏，仅作对照）**", None: "未知"}[d["leak_free"]]
-        for m, lab in (("3dgs", "3DGS 渲染深度"),):
-            a, s = d[m]["all"], d[m]["static"]
-            lam = f(r.get("depth_lambda", 0.0), 2) if r.get("depth_lambda") else "—"
-            L.append(f"| `{name}` | {leak} | {lam} | {lab} | {f(a['median_abs_m'], 2)} / {f(s['median_abs_m'], 2)} | "
-                     f"{pct(a['within_tol'])} / {pct(s['within_tol'])} | "
-                     f"{' / '.join(f(s.get('by_range', {}).get(b, {}).get('median_abs_m'), 2) for b in bins)} | {a['n']:,} |")
+        lam = f(r.get("depth_lambda", 0.0), 2) if r.get("depth_lambda") else "—"
+        L.append(depth_row(f"`{name}`", leak, lam, "3DGS 渲染深度", d["3dgs"]))
+    # Every run also renders its initial Gaussians; runs sharing an initialisation give identical rows.
+    groups: dict[str, list[str]] = {}
+    for name, r in runs.items():
+        d = r.get("heldout_depth")
+        if d and "init_only" in d:
+            groups.setdefault(json.dumps([d["init_only"], d["leak_free"]], sort_keys=True), []).append(name)
+    for names in groups.values():
+        d = runs[names[0]]["heldout_depth"]
+        leak = {True: "否（严格）", False: "**是（泄漏，仅作对照）**", None: "未知"}[d["leak_free"]]
+        label = f"`{names[0]}`" if len(names) == 1 else (f"`{names[0]}`、`{names[1]}`" if len(names) == 2
+                                                          else f"`{names[0]}` 等 {len(names)} 个同初始化运行")
+        L.append(depth_row(label, leak, "—", "基线：仅初始化（0 次迭代）", d["init_only"]))
+    b = load_json("results/depth_baselines.json")
+    if b:
+        base = b[BASELINE]
+        L.append(depth_row("—", "否（严格）", "—", "基线：只用激光（最近训练扫描重投影）", base))
+        L += ["", f"- 只用激光的基线（`scripts/depth_baseline.py`，CPU）：每个留出帧取时间最近的**训练**扫描（严格初始化或深度监督用过的扫描，"
+                  f"不含评测扫描；与留出帧的时间差中位 {base['abs_dt_ms_median']:.0f} ms），投影到留出帧相机，空像素取图像上最近的投影点深度；"
+                  f"评测像素中 {pct(base['direct_hit_frac_all'])} 有直接投影点，其余靠填充。评测像素集合与 3DGS 行相同，"
+                  "脚本先用同一投影代码逐位复现全部 `eval_depth`。"]
+    else:
+        L.append("")
+    L.append("- 原始运行 JSON 里 `heldout_depth.gt` 的旧描述写着评测扫描 “never used in training”，那段文字早于泄漏发现；"
+             "是否真正隔离以本表第二列（`leak_free`）为准，`full_*` / `sparse4_*` 的初始化读过这些扫描。")
     return "\n".join(L)
+
+
+def depth_row(label: str, leak: str, lam: str, method: str, d: dict) -> str:
+    bins = ("0-10m", "10-20m", "20-40m", "40-80m")
+    a, s = d["all"], d["static"]
+    return (f"| {label} | {leak} | {lam} | {method} | {f(a['median_abs_m'], 2)} / {f(s['median_abs_m'], 2)} | "
+            f"{pct(a['within_tol'])} / {pct(s['within_tol'])} | "
+            f"{' / '.join(f(s.get('by_range', {}).get(x, {}).get('median_abs_m'), 2) for x in bins)} | {a['n']:,} |")
 
 
 def render_web() -> str:
@@ -227,6 +257,19 @@ def render_findings(runs: dict[str, dict]) -> str:
         L.append(f"- 激光深度监督（`strict_depth_7k` − `strict_7k`）：留出帧深度中位误差 {f(b['static']['median_abs_m'], 2)} → "
                  f"{f(a['static']['median_abs_m'], 2)} m（静态像素），≤ 0.5 m 占比 {pct(b['static']['within_tol'])} → {pct(a['static']['within_tol'])}；"
                  f"全图 PSNR {sgn(dp('strict_depth_7k', 'strict_7k'), 2)} dB，LPIPS {sgn(dp('strict_depth_7k', 'strict_7k', 'lpips'), 3)}")
+    b = load_json("results/depth_baselines.json")
+    if g("strict_depth_7k") and b:
+        a, c = runs["strict_depth_7k"]["heldout_depth"]["3dgs"]["static"], b[BASELINE]["static"]
+
+        def near(x, k="0-10m"):
+            return f(x["by_range"][k]["median_abs_m"], 2)
+        L.append(f"- 深度监督模型 vs 只用激光的基线（`strict_depth_7k` / 最近训练扫描重投影，静态像素）：中位误差 "
+                 f"{f(a['median_abs_m'], 2)} / {f(c['median_abs_m'], 2)} m，≤ 0.5 m 占比 {pct(a['within_tol'])} / {pct(c['within_tol'])}；"
+                 f"0–10 m {near(a)} / {near(c)} m，20–40 m {near(a, '20-40m')} / {near(c, '20-40m')} m")
+    if g("strict_7k") and "init_only" in runs["strict_7k"].get("heldout_depth", {}):
+        a, c = runs["strict_7k"]["heldout_depth"]["init_only"]["static"], runs["strict_7k"]["heldout_depth"]["3dgs"]["static"]
+        L.append(f"- 只用图像训练相对仅初始化（`strict_7k`，静态像素）：深度中位误差 {f(a['median_abs_m'], 2)} → {f(c['median_abs_m'], 2)} m，"
+                 f"≤ 0.5 m 占比 {pct(a['within_tol'])} → {pct(c['within_tol'])}")
     if g("full_7k") and g("strict_7k") and "heldout_depth" in runs["full_7k"]:
         a, b = runs["full_7k"]["heldout_depth"]["3dgs"]["static"], runs["strict_7k"]["heldout_depth"]["3dgs"]["static"]
         L.append(f"- 初始化是否含评测扫描（`full_7k` 含 / `strict_7k` 不含；两者初始化只差这 20 帧扫描）：留出帧深度中位误差 {f(a['median_abs_m'], 2)} / "
@@ -235,6 +278,45 @@ def render_findings(runs: dict[str, dict]) -> str:
     if any(re.search(r"(?<!—)—(?!—)", line) for line in L):
         L.append("- — 表示无有效支持或差值未定义（例如 +∞ − +∞），不代表零差异。")
     return "\n".join(L) if L else "（尚无）"
+
+
+def render_tldr(runs: dict[str, dict]) -> str:
+    """First-screen summary; every number comes from the same JSON as the tables below."""
+    need = ("full_7k", "full_30k", "strict_7k", "strict_7k_seed1", "strict_mask_7k", "strict_depth_7k")
+    b = load_json("results/depth_baselines.json")
+    if any(k not in runs for k in need) or not b:
+        return "（结果 JSON 不全，无法生成摘要）"
+    r7, r30 = runs["full_7k"], runs["full_30k"]
+    h7, c7, h30 = r7["heldout_mean"]["3dgs"], r7["heldout_mean"]["copy_nearest"], r30["heldout_mean"]["3dgs"]
+    s0 = runs["strict_7k"]["heldout_depth"]["3dgs"]["static"]
+    sd = runs["strict_depth_7k"]["heldout_depth"]["3dgs"]["static"]
+    sb = b[BASELINE]["static"]
+
+    def dpsnr(a, c="strict_7k", region="heldout_mean"):
+        return difference(runs[a][region]["3dgs"]["psnr"], runs[c][region]["3dgs"]["psnr"])
+
+    seed = dpsnr("strict_7k_seed1", region="heldout_static_mean")
+    m = dpsnr("strict_mask_7k", region="heldout_static_mean")
+    return "\n".join([
+        f"- **What / 做了什么**：3D Gaussian Splatting (gsplat) on one {r7['clip_duration_s']} s Argoverse 2 front-camera clip "
+        f"({r7['n_frames']} frames, {r7['n_test']} held out), scored against copy-nearest-frame and init-only baselines; "
+        f"[live splat viewer / 在线查看器]({VIEWER_URL})。用一段前视视频训练 3DGS，在留出帧上与基线比较。",
+        f"- **Images / 图像**：held-out PSNR {f(h7['psnr'], 2)} dB (7k) / {f(h30['psnr'], 2)} dB (30k) vs {f(c7['psnr'], 2)} dB "
+        f"for copying the nearest training frame ({r7['heldout_3dgs_beats_copy_nearest']}/{r7['n_test']} frames higher); "
+        f"at 7k the copy baseline still wins LPIPS ({f(c7['lpips'], 3)} vs {f(h7['lpips'], 3)})。7k 的 LPIPS 仍是复制基线更好。",
+        f"- **Depth / 深度**：lidar depth supervision cuts held-out depth error {f(s0['median_abs_m'], 2)} → {f(sd['median_abs_m'], 2)} m "
+        f"(static median) at {sgn(dpsnr('strict_depth_7k'), 2)} dB PSNR, but a lidar-only baseline (nearest training sweep re-projected) "
+        f"also gets {f(sb['median_abs_m'], 2)} m (≤ 0.5 m: {pct(sd['within_tol'])} vs {pct(sb['within_tol'])}), so most of the gain "
+        "is lidar geometry absorbed by the model。深度监督的增益大部分可由激光本身解释。",
+        f"- **Masks / 掩膜**：excluding moving-object pixels changes static PSNR by "
+        f"{sgn(m, 2)} dB "
+        f"vs seed-to-seed {f(abs(seed) if seed is not None else None, 2)} dB: "
+        + ("no measurable effect。移动物体掩膜没有可测收益。" if seed is not None and m is not None and abs(m) <= abs(seed)
+           else "compare with the ablation table。见消融表。"),
+        f"- **Limits / 局限**：one {r7['clip_duration_s']} s clip, one camera, {r7['resolution'][0]}×{r7['resolution'][1]}, one run per "
+        "config (plus one seed repeat), floaters off the trajectory; data CC BY-NC-SA 4.0, non-commercial。"
+        "单段、单相机、低分辨率、每配置一次运行；数据仅限非商用。",
+    ])
 
 
 def render_setup(runs: dict[str, dict]) -> str:
@@ -274,7 +356,7 @@ def main() -> None:
     new = cur
     for tag, body in (("results", render_results(runs)), ("setup", render_setup(runs)), ("ablation", render_ablation(runs)),
                       ("depth", render_depth(runs)), ("web", render_web()), ("offpath", render_offpath()),
-                      ("findings", render_findings(runs))):
+                      ("findings", render_findings(runs)), ("tldr", render_tldr(runs))):
         new = replace_block(new, tag, body)
     # every image referenced from README must exist in the repo and be < 300 KB
     for rel in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", cur):

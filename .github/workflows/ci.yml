@@ -22,8 +22,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
-      - name: Unit tests (pose math, split, metrics, masks, lidar guard, splat export)
-        run: python -m pytest -q
+      - name: Unit tests (pose math, split, metrics, masks, lidar guard, lidar baseline, splat export)
+        env:
+          D3GS_REQUIRE_TORCH: "1"   # torch-dependent tests must run here, never be skipped
+        run: python -m pytest -q -rs
+      - name: No local machine paths in tracked text files
+        shell: bash
+        run: |
+          if git grep -nI -E '(^|[^A-Za-z])[A-Za-z]:[/\]|/home/[a-z]|/Users/[A-Za-z]' -- . ':!.github/workflows/ci.yml'; then
+            echo "local machine paths found (use \$DATA_ROOT or a relative path)"; exit 1
+          fi
       - name: README numbers match results JSON
         run: python scripts/check_readme.py --check
       - name: Mutation checks (isolated CPU tests, no GPU or dataset download)

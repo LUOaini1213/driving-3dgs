@@ -4,11 +4,11 @@ For each held-out frame the camera is moved along its own x axis (right = +) by 
 Two things are measured, both without a ground-truth image:
   * coverage: fraction of pixels with accumulated alpha < 0.5 (holes where nothing was reconstructed);
   * geometry: rendered expected depth vs the held-out frame's reserved lidar sweep projected into the
-    SHIFTED camera (the sweep is 3D, so it can be re-projected; it was never used in training).
+    SHIFTED camera (the sweep is 3D, so it can be re-projected; under the strict policy it is never used in training or initialisation).
 Writes a JSON of means per offset, and optionally a small comparison figure (< 300 KB).
 
 Usage:
-  python scripts/offpath.py --work D:/driving-3dgs/work/strict --runs D:/driving-3dgs/runs/strict_7k D:/driving-3dgs/runs/strict_depth_7k \
+  python scripts/offpath.py --work "$DATA_ROOT/work/strict" --runs "$DATA_ROOT/runs/strict_7k" "$DATA_ROOT/runs/strict_depth_7k" \
       --results results/offpath.json --fig docs/img/offpath.jpg
 """
 from __future__ import annotations
