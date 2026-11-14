@@ -7,7 +7,8 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-import torch
+
+torch = pytest.importorskip("torch", reason="export/report tests need torch (CI installs CPU torch)")
 
 ROOT = Path(__file__).resolve().parents[1]
 

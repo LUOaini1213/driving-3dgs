@@ -1,0 +1,258 @@
+{
+ "date": "2026-11-03",
+ "log_id": "15ec0778-826e-3ed7-9775-54fbf66997f4",
+ "method": {
+  "lidar_nearest_train_sweep": "time-nearest training sweep (strict init or depth-supervision sweep, never an evaluation sweep) re-projected into the held-out camera with prepare.py's depth_map; empty pixels take the nearest projected return in image space (scipy distance_transform_edt)"
+ },
+ "gt": "held-out frame's reserved time-nearest lidar sweep (eval_depth/*.npy), z-depth",
+ "pooling": "all lidar pixels of the 20 held-out frames pooled; same cohort and bins as evaluate.py",
+ "tol_m": 0.5,
+ "range_m": [
+  0.5,
+  80.0
+ ],
+ "eval_depth_reproduced": true,
+ "eval_depth_sha256": {
+  "eval_depth/0004.npy": "528da09bc421c28d156c83c59e00c7312eee492f2ac635ec9377c0c476ba3575",
+  "eval_depth/0012.npy": "c8330e5247cc157efc0ffb06a26d31ed20d5326758935945057889ac937154ed",
+  "eval_depth/0020.npy": "6bbd203e0b2af7b023fc532bf79036f6ff73bc78db42908ef213b4975c66b2e9",
+  "eval_depth/0028.npy": "97cd1a8e0480525a3dd2609efa7a69b0dd6628c265ca7c03eae45870c320a00c",
+  "eval_depth/0036.npy": "a5c707528d863e9396e64ba2ce18189412dde30c951ff26bd718cea31a326f66",
+  "eval_depth/0044.npy": "eff5f6ec9c8c0441e31ba1a45a11cc5c922982849a3f152fdcf462655490924f",
+  "eval_depth/0052.npy": "d1f6baf5f9dd0bce1306facda0933294db38ff1ccdd24a71d9e2e0ebd24b8e28",
+  "eval_depth/0060.npy": "bf025e988885995794f755020ba4f83a4a0a82e1887f64387c10cfbc17d8cc3b",
+  "eval_depth/0068.npy": "a870b07c791b86c4ce00291836c8b5e139858d17e0dbbafac7ec3dc086063ced",
+  "eval_depth/0076.npy": "0bd8956282d994383f9eedc4e7e927ce4e525337e3ee42360e810fa4ab715f74",
+  "eval_depth/0084.npy": "d813a839b6a6d58aa6b2914bba558346f3facb7ecd7e359e619b017e9407a42c",
+  "eval_depth/0092.npy": "73292a4e7d1e584b18b41fdc916b744534e0c7d6981f920ab91a256ff3ee32e5",
+  "eval_depth/0100.npy": "8372020a2b51bf26edcef229a178dc10c18407c26394d3b78654f332e08445d4",
+  "eval_depth/0108.npy": "25e7731461a96c9653aa682660641181882735807319c75fd1db4dff593225ca",
+  "eval_depth/0116.npy": "eb262b66768e486c894dd9d1286586ce41c41990a31772628a0ce9e302b5049e",
+  "eval_depth/0124.npy": "ea80ee84ee0d7f856c6cfc264aa13f09f9deee0977c3b0ab9a2b7ce14b1d84a0",
+  "eval_depth/0132.npy": "9f7d888b9ea69e1c98bbbee12c93a23d8090c68f86d158c06ab65dc90ef2f527",
+  "eval_depth/0140.npy": "1626fb38241126ae3abfc0c2b2bb9019ece1771eee579450df0397c47700a159",
+  "eval_depth/0148.npy": "1893b69351122a93ed5d02b29662333e0aa67547d364ede8d0181907617b10f0",
+  "eval_depth/0156.npy": "b81c55266c16c345b9724b952f2f219db2946876ad9a486f102368651544133e"
+ },
+ "lidar_nearest_train_sweep": {
+  "all": {
+   "n": 243518,
+   "median_abs_m": 0.1415,
+   "mean_abs_m": 1.2072,
+   "within_tol": 0.7084,
+   "abs_rel": 0.0588,
+   "by_range": {
+    "0-10m": {
+     "n": 24989,
+     "median_abs_m": 0.3283,
+     "mean_abs_m": 0.9376,
+     "within_tol": 0.6619,
+     "abs_rel": 0.1615
+    },
+    "10-20m": {
+     "n": 69178,
+     "median_abs_m": 0.1591,
+     "mean_abs_m": 0.8907,
+     "within_tol": 0.6973,
+     "abs_rel": 0.0602
+    },
+    "20-40m": {
+     "n": 116711,
+     "median_abs_m": 0.088,
+     "mean_abs_m": 1.1387,
+     "within_tol": 0.7439,
+     "abs_rel": 0.0401
+    },
+    "40-80m": {
+     "n": 32640,
+     "median_abs_m": 0.1802,
+     "mean_abs_m": 2.3298,
+     "within_tol": 0.6405,
+     "abs_rel": 0.0444
+    }
+   }
+  },
+  "static": {
+   "n": 231741,
+   "median_abs_m": 0.1429,
+   "mean_abs_m": 1.1612,
+   "within_tol": 0.7065,
+   "abs_rel": 0.0547,
+   "by_range": {
+    "0-10m": {
+     "n": 21726,
+     "median_abs_m": 0.3717,
+     "mean_abs_m": 0.8321,
+     "within_tol": 0.6344,
+     "abs_rel": 0.1564
+    },
+    "10-20m": {
+     "n": 64683,
+     "median_abs_m": 0.1615,
+     "mean_abs_m": 0.8227,
+     "within_tol": 0.6964,
+     "abs_rel": 0.0544
+    },
+    "20-40m": {
+     "n": 113013,
+     "median_abs_m": 0.0872,
+     "mean_abs_m": 1.0981,
+     "within_tol": 0.7448,
+     "abs_rel": 0.0387
+    },
+    "40-80m": {
+     "n": 32319,
+     "median_abs_m": 0.1798,
+     "mean_abs_m": 2.2808,
+     "within_tol": 0.6414,
+     "abs_rel": 0.0432
+    }
+   }
+  },
+  "direct_hit_frac_all": 0.2865,
+  "abs_dt_ms_median": 90.0
+ },
+ "per_frame": [
+  {
+   "frame": 4,
+   "sweep_ts": 315970261059974000,
+   "dt_ms": -90.0,
+   "eval_px": 12140,
+   "direct_hit_px": 4316
+  },
+  {
+   "frame": 12,
+   "sweep_ts": 315970261460096000,
+   "dt_ms": -89.8,
+   "eval_px": 12252,
+   "direct_hit_px": 4375
+  },
+  {
+   "frame": 20,
+   "sweep_ts": 315970261860219000,
+   "dt_ms": -89.7,
+   "eval_px": 12369,
+   "direct_hit_px": 5392
+  },
+  {
+   "frame": 28,
+   "sweep_ts": 315970262259660000,
+   "dt_ms": -90.3,
+   "eval_px": 12445,
+   "direct_hit_px": 4373
+  },
+  {
+   "frame": 36,
+   "sweep_ts": 315970262659783000,
+   "dt_ms": -90.1,
+   "eval_px": 12404,
+   "direct_hit_px": 4299
+  },
+  {
+   "frame": 44,
+   "sweep_ts": 315970263059888000,
+   "dt_ms": -90.0,
+   "eval_px": 12536,
+   "direct_hit_px": 3964
+  },
+  {
+   "frame": 52,
+   "sweep_ts": 315970263460011000,
+   "dt_ms": -89.9,
+   "eval_px": 13428,
+   "direct_hit_px": 4055
+  },
+  {
+   "frame": 60,
+   "sweep_ts": 315970263860133000,
+   "dt_ms": -89.8,
+   "eval_px": 13841,
+   "direct_hit_px": 3045
+  },
+  {
+   "frame": 68,
+   "sweep_ts": 315970264260237000,
+   "dt_ms": -89.7,
+   "eval_px": 13778,
+   "direct_hit_px": 3588
+  },
+  {
+   "frame": 76,
+   "sweep_ts": 315970264659696000,
+   "dt_ms": -90.2,
+   "eval_px": 14039,
+   "direct_hit_px": 4148
+  },
+  {
+   "frame": 84,
+   "sweep_ts": 315970265059804000,
+   "dt_ms": -90.1,
+   "eval_px": 13442,
+   "direct_hit_px": 3881
+  },
+  {
+   "frame": 92,
+   "sweep_ts": 315970265459926000,
+   "dt_ms": -90.0,
+   "eval_px": 12056,
+   "direct_hit_px": 2837
+  },
+  {
+   "frame": 100,
+   "sweep_ts": 315970265859385000,
+   "dt_ms": -90.5,
+   "eval_px": 11446,
+   "direct_hit_px": 3049
+  },
+  {
+   "frame": 108,
+   "sweep_ts": 315970266260153000,
+   "dt_ms": -89.8,
+   "eval_px": 11120,
+   "direct_hit_px": 2621
+  },
+  {
+   "frame": 116,
+   "sweep_ts": 315970266659612000,
+   "dt_ms": -90.3,
+   "eval_px": 11036,
+   "direct_hit_px": 2408
+  },
+  {
+   "frame": 124,
+   "sweep_ts": 315970267059718000,
+   "dt_ms": -90.2,
+   "eval_px": 11408,
+   "direct_hit_px": 2827
+  },
+  {
+   "frame": 132,
+   "sweep_ts": 315970267459841000,
+   "dt_ms": -90.1,
+   "eval_px": 10718,
+   "direct_hit_px": 2320
+  },
+  {
+   "frame": 140,
+   "sweep_ts": 315970267859963000,
+   "dt_ms": -90.0,
+   "eval_px": 10986,
+   "direct_hit_px": 2319
+  },
+  {
+   "frame": 148,
+   "sweep_ts": 315970268260068000,
+   "dt_ms": -89.9,
+   "eval_px": 11213,
+   "direct_hit_px": 2329
+  },
+  {
+   "frame": 156,
+   "sweep_ts": 315970268660191000,
+   "dt_ms": -89.7,
+   "eval_px": 10861,
+   "direct_hit_px": 3617
+  }
+ ],
+ "cohort_matches": "results/runs/strict_7k.json"
+}

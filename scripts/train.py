@@ -4,7 +4,7 @@ Only TRAIN pixels are decoded for optimization; all prepared files are hashed fo
 Writes ckpt.pt and train_stats.json to a new --out directory.
 
 Usage:
-  python scripts/train.py --work D:/driving-3dgs/work/<log> --out D:/driving-3dgs/runs/<name> --steps 7000
+  python scripts/train.py --work "$DATA_ROOT/work/<name>" --out "$DATA_ROOT/runs/<name>" --steps 7000
 """
 from __future__ import annotations
 

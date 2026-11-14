@@ -52,6 +52,61 @@ def nearest_sweep(sweep_ts, t_ns: int, allowed) -> int:
     return allowed[int(np.argmin(np.abs(ts - int(t_ns))))]
 
 
+def baseline_sweep(sweep_ts, t_ns: int, training_sweep_ts, eval_sweep_ts) -> int:
+    """Lidar-only depth baseline: index of the time-nearest sweep the trained model could have seen.
+
+    ``training_sweep_ts`` are the sweeps used for initialisation or depth supervision; the
+    chosen sweep is checked against ``eval_sweep_ts`` so the baseline never reads held-out lidar.
+    """
+    sweep_ts = np.asarray(sweep_ts, dtype=np.int64)
+    pos = {int(t): k for k, t in enumerate(sweep_ts)}
+    allowed = sorted(pos[int(t)] for t in {int(t) for t in training_sweep_ts} if int(t) in pos)
+    if not allowed:
+        raise ValueError("no training sweep available for the lidar baseline")
+    k = nearest_sweep(sweep_ts, t_ns, allowed)
+    assert_no_lidar_leak([int(sweep_ts[k])], eval_sweep_ts)
+    return k
+
+
+def fill_nearest(D: np.ndarray) -> np.ndarray:
+    """Dense depth from a sparse map: every empty pixel (0) takes the depth of the nearest pixel
+    (Euclidean, image space) that has a lidar return. Pixels with a return keep their value."""
+    from scipy.ndimage import distance_transform_edt
+    D = np.asarray(D)
+    empty = ~(D > 0)
+    if empty.all():
+        raise ValueError("cannot fill a depth map without any lidar return")
+    if not empty.any():
+        return D.copy()
+    idx = distance_transform_edt(empty, return_distances=False, return_indices=True)
+    return D[tuple(idx)]
+
+
+def pooled_depth_errors(preds, gts, keeps=None, tol: float = 0.5,
+                        bins=((0, 10), (10, 20), (20, 40), (40, 80))) -> dict:
+    """Errors over the lidar pixels of several frames pooled (the ``heldout_depth`` layout of evaluate.py).
+
+    ``keeps`` (optional, per frame) restricts the cohort, e.g. to static pixels. The result is
+    ``depth_errors`` rounded to 4 decimals, plus ``by_range`` keyed by the lidar depth bin.
+    """
+    P, G = [], []
+    for k, (pred, gt) in enumerate(zip(preds, gts)):
+        v = np.asarray(gt) > 0
+        if keeps is not None and keeps[k] is not None:
+            v &= np.asarray(keeps[k], dtype=bool)
+        P.append(np.asarray(pred)[v])
+        G.append(np.asarray(gt)[v])
+    P, G = np.concatenate(P), np.concatenate(G)
+
+    def rnd(d: dict) -> dict:
+        return {k: (round(v, 4) if isinstance(v, float) else v) for k, v in d.items()}
+
+    out = rnd(depth_errors(P, G, tol=tol))
+    out["by_range"] = {f"{lo}-{hi}m": rnd(depth_errors(P, np.where((G >= lo) & (G < hi), G, 0), tol=tol))
+                       for lo, hi in bins}
+    return out
+
+
 def depth_map(K: np.ndarray, cam_SE3_world: np.ndarray, pts_world: np.ndarray, W: int, H: int,
               near: float = 0.5, far: float = 80.0) -> np.ndarray:
     """Sparse z-depth image (H, W) float32 from world points; 0 = no lidar return.

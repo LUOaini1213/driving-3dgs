@@ -9,12 +9,13 @@ Also reports the trained model on TRAIN frames (to show the train/test gap).
 With --aux <strict work dir> (default: --work) it also reports
   * static-only metrics: PSNR / SSIM / LPIPS over pixels NOT covered by a moving object (AV2 cuboids);
   * depth error vs lidar on held-out frames: the rendered expected depth against the held-out frame's
-    reserved evaluation sweep (never used in training), over all lidar pixels and static-only pixels.
+    reserved evaluation sweep, over all lidar pixels and static-only pixels. Under the strict policy that sweep is
+    never used in training or initialisation; the original `full`/`sparse4` initialisation did read it.
     heldout_depth.leak_free is False when the run's initialisation or depth supervision used any of those
     sweeps (the original `full` work dir did: its init read every downloaded sweep).
 
 Usage:
-  python scripts/evaluate.py --work D:/driving-3dgs/work/<log> --run D:/driving-3dgs/runs/<name> \
+  python scripts/evaluate.py --work "$DATA_ROOT/work/<name>" --run "$DATA_ROOT/runs/<name>" \
       --results results/results.json --figs docs/img
 """
 from __future__ import annotations
@@ -38,9 +39,10 @@ from d3gs.image_io import read_image, write_image  # noqa: E402
 from d3gs.provenance import verify_run, capture_eval_inputs, sha256  # noqa: E402
 
 
-def load_lpips(torch_home: str):
+def load_lpips(torch_home: str | None):
     try:
-        os.environ["TORCH_HOME"] = torch_home
+        if torch_home:
+            os.environ["TORCH_HOME"] = torch_home
         import lpips
         return lpips.LPIPS(net="alex", verbose=False).cuda().eval()
     except Exception as e:  # noqa: BLE001
@@ -118,7 +120,7 @@ def main() -> None:
     ap.add_argument("--results", required=True)
     ap.add_argument("--figs", default=None, help="folder for small comparison JPEGs")
     ap.add_argument("--n-figs", type=int, default=3)
-    ap.add_argument("--torch-home", default="D:/driving-3dgs/torch_home")
+    ap.add_argument("--torch-home", default=None, help="LPIPS weight cache (default: TORCH_HOME or torch's own cache)")
     ap.add_argument("--aux", default=None, help="work dir with masks/ and eval_depth/ (prepare.py --strict-lidar)")
     ap.add_argument("--allow-unverified-run", action="store_true", help="allow legacy runs; never certify their training inputs")
     args = ap.parse_args()

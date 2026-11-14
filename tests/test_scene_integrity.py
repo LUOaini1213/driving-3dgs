@@ -7,10 +7,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
-import torch
 
-from d3gs.scene import Scene
-from scripts import evaluate, offpath, prepare, train
+torch = pytest.importorskip("torch", reason="training/evaluation entry points need torch (CI installs CPU torch)")
+from d3gs.scene import Scene  # noqa: E402
+from scripts import evaluate, offpath, prepare, train  # noqa: E402
 
 
 def make_work(path):

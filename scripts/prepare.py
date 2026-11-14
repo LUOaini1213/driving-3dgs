@@ -14,7 +14,7 @@ Steps
   7. (--masks) per-frame masks of moving objects / all vehicles from the AV2 cuboid annotations.
 
 Usage:
-  python scripts/prepare.py --log-dir D:/driving-3dgs/data/<log> --out D:/driving-3dgs/work/<log>
+  python scripts/prepare.py --log-dir "$DATA_ROOT/data/<log>" --out "$DATA_ROOT/work/<name>"
 """
 from __future__ import annotations
 

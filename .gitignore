@@ -1,4 +1,4 @@
-# data / outputs live in D:\driving-3dgs, never in git
+# data / outputs live in $DATA_ROOT (scripts/run_all.sh; default: the repo root), never in git
 *.ply
 *.pt
 *.pth
@@ -13,6 +13,7 @@
 /runs/
 /export/
 /env/
+/torch_home/
 __pycache__/
 .pytest_cache/
 *.pyc
@@ -20,3 +21,4 @@ __pycache__/
 /build/pages/
 /mutation-artifacts/
 /results/viewer-checks/
+/.venv/
