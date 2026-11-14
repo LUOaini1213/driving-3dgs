@@ -3,7 +3,7 @@
 <!-- BEGIN:tldr -->
 - **What / 做了什么**：3D Gaussian Splatting (gsplat) on one 7.95 s Argoverse 2 front-camera clip (160 frames, 20 held out), scored against copy-nearest-frame and init-only baselines; [live splat viewer / 在线查看器](https://luoaini1213.github.io/driving-3dgs/)。用一段前视视频训练 3DGS，在留出帧上与基线比较。
 - **Images / 图像**：held-out PSNR 27.76 dB (7k) / 29.87 dB (30k) vs 20.71 dB for copying the nearest training frame (20/20 frames higher); at 7k the copy baseline still wins LPIPS (0.118 vs 0.192)。7k 的 LPIPS 仍是复制基线更好。
-- **Depth / 深度**：lidar depth supervision cuts held-out depth error 3.14 → 0.14 m (static median) at -1.06 dB PSNR, but a lidar-only baseline (nearest training sweep re-projected) also gets 0.14 m (≤ 0.5 m: 75.4% vs 70.7%), so most of the gain is lidar geometry absorbed by the model。深度监督的增益大部分可由激光本身解释。
+- **Depth / 深度**：lidar depth supervision cuts held-out depth error 3.14 → 0.14 m (static median) at -1.06 dB PSNR, but a lidar-only baseline (nearest training sweep re-projected) also gets 0.14 m (≤ 0.5 m: model 75.4% vs baseline 70.7%), so most of the gain is lidar geometry absorbed by the model。深度监督的增益大部分可由激光本身解释。
 - **Masks / 掩膜**：excluding moving-object pixels changes static PSNR by -0.04 dB vs seed-to-seed 0.05 dB: no measurable effect。移动物体掩膜没有可测收益。
 - **Limits / 局限**：one 7.95 s clip, one camera, 388×456, one run per config (plus one seed repeat), floaters off the trajectory; data CC BY-NC-SA 4.0, non-commercial。单段、单相机、低分辨率、每配置一次运行；数据仅限非商用。
 <!-- END:tldr -->
@@ -157,7 +157,7 @@
 - 同配置换种子（`strict_7k` vs `strict_7k_seed1`）：全图 PSNR 差 0.05 dB，静态 PSNR 差 0.05 dB——小于这个量级的差异不当作效果
 - 排除移动物体像素（`strict_mask_7k` − `strict_7k`）：全图 PSNR -0.47 dB，静态 PSNR -0.04 dB，静态 LPIPS ±0.000
 - 激光深度监督（`strict_depth_7k` − `strict_7k`）：留出帧深度中位误差 3.14 → 0.14 m（静态像素），≤ 0.5 m 占比 12.0% → 75.4%；全图 PSNR -1.06 dB，LPIPS +0.019
-- 深度监督模型 vs 只用激光的基线（`strict_depth_7k` / 最近训练扫描重投影，静态像素）：中位误差 0.14 / 0.14 m，≤ 0.5 m 占比 75.4% / 70.7%；0–10 m 0.12 / 0.37 m，20–40 m 0.12 / 0.09 m
+- 深度监督模型 vs 只用激光的基线（`strict_depth_7k` / 最近训练扫描重投影，静态像素）：中位误差 0.14 / 0.14 m，≤ 0.5 m 占比 75.4% / 70.7%；0–10 m 0.12 / 0.37 m，20–40 m 0.12 / 0.09 m，40–80 m 0.28 / 0.18 m
 - 只用图像训练相对仅初始化（`strict_7k`，静态像素）：深度中位误差 5.23 → 3.14 m，≤ 0.5 m 占比 13.6% → 12.0%
 - 初始化是否含评测扫描（`full_7k` 含 / `strict_7k` 不含；两者初始化只差这 20 帧扫描）：留出帧深度中位误差 3.40 / 3.14 m，≤ 0.5 m 占比 9.0% / 12.0%；全图 PSNR +0.12 dB（前者减后者）
 <!-- END:findings -->
@@ -172,7 +172,7 @@
 - **激光深度监督**：相对只用图像训练的模型，留出帧深度误差降了一个数量级、各距离段都降，图像指标则下降（见“关键差异”）、高斯数和训练时间、显存都明显上升——
   深度损失的梯度也在触发加密。λ 只试了 0.05 一个值，没有调参，这个权衡点未必最优。掩膜 + 深度（`strict_mask_depth_7k`）与只加深度的深度指标几乎相同。
 - **但这个深度数字要和只用激光的基线一起看**：把时间最近的训练扫描（模型训练时能看到的激光）直接投影到留出帧，
-  中位误差与深度监督模型相同（见深度表和“关键差异”）。深度监督模型在近处（0–10 m）更好、≤ 0.5 m 占比略高，在 20–40 m 反而略差；
+  中位误差与深度监督模型相同（见深度表和“关键差异”）。深度监督模型在近处（0–10 m）更好、≤ 0.5 m 占比略高，在 20 m 以外（20–40 m、40–80 m）反而更差；
   所以上面那一个数量级的降幅主要说明模型吸收了相邻激光的几何，而不是在激光之外预测出更准的几何。它渲染出的是稠密、与图像对齐的深度，
   这一点本仓库没有单独量化。
 - **只用图像训练相对仅初始化**：中位深度误差下降，但 ≤ 0.5 m 占比反而略降（见“关键差异”）；原因没有核实，可能是光度训练为拟合外观移动了部分高斯。

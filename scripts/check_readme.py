@@ -265,7 +265,8 @@ def render_findings(runs: dict[str, dict]) -> str:
             return f(x["by_range"][k]["median_abs_m"], 2)
         L.append(f"- 深度监督模型 vs 只用激光的基线（`strict_depth_7k` / 最近训练扫描重投影，静态像素）：中位误差 "
                  f"{f(a['median_abs_m'], 2)} / {f(c['median_abs_m'], 2)} m，≤ 0.5 m 占比 {pct(a['within_tol'])} / {pct(c['within_tol'])}；"
-                 f"0–10 m {near(a)} / {near(c)} m，20–40 m {near(a, '20-40m')} / {near(c, '20-40m')} m")
+                 f"0–10 m {near(a)} / {near(c)} m，20–40 m {near(a, '20-40m')} / {near(c, '20-40m')} m，"
+                 f"40–80 m {near(a, '40-80m')} / {near(c, '40-80m')} m")
     if g("strict_7k") and "init_only" in runs["strict_7k"].get("heldout_depth", {}):
         a, c = runs["strict_7k"]["heldout_depth"]["init_only"]["static"], runs["strict_7k"]["heldout_depth"]["3dgs"]["static"]
         L.append(f"- 只用图像训练相对仅初始化（`strict_7k`，静态像素）：深度中位误差 {f(a['median_abs_m'], 2)} → {f(c['median_abs_m'], 2)} m，"
@@ -306,7 +307,7 @@ def render_tldr(runs: dict[str, dict]) -> str:
         f"at 7k the copy baseline still wins LPIPS ({f(c7['lpips'], 3)} vs {f(h7['lpips'], 3)})。7k 的 LPIPS 仍是复制基线更好。",
         f"- **Depth / 深度**：lidar depth supervision cuts held-out depth error {f(s0['median_abs_m'], 2)} → {f(sd['median_abs_m'], 2)} m "
         f"(static median) at {sgn(dpsnr('strict_depth_7k'), 2)} dB PSNR, but a lidar-only baseline (nearest training sweep re-projected) "
-        f"also gets {f(sb['median_abs_m'], 2)} m (≤ 0.5 m: {pct(sd['within_tol'])} vs {pct(sb['within_tol'])}), so most of the gain "
+        f"also gets {f(sb['median_abs_m'], 2)} m (≤ 0.5 m: model {pct(sd['within_tol'])} vs baseline {pct(sb['within_tol'])}), so most of the gain "
         "is lidar geometry absorbed by the model。深度监督的增益大部分可由激光本身解释。",
         f"- **Masks / 掩膜**：excluding moving-object pixels changes static PSNR by "
         f"{sgn(m, 2)} dB "
